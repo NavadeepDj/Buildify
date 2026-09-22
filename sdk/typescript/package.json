@@ -1,0 +1,28 @@
+{
+  "name": "buildify-ai",
+  "version": "0.1.0",
+  "description": "Official TypeScript/JavaScript SDK for Buildify Edge AI Server running on Android phones with Gemini 2.0 Flash fallback",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "buildify",
+    "edge-ai",
+    "llm",
+    "local-ai",
+    "gemini",
+    "android",
+    "openai"
+  ],
+  "author": "Buildify Team",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  }
+}
