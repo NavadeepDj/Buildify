@@ -12,6 +12,7 @@ const links = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#demo", label: "Demo" },
+  { href: "/download", label: "Download" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
   { href: "/#faq", label: "FAQ" },
@@ -73,10 +74,10 @@ export function SiteNav() {
             <span className="hidden lg:inline">GitHub</span>
           </a>
           <Link
-            href="/#waitlist"
+            href="/download"
             className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground px-3 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
           >
-            Join waitlist
+            Download
           </Link>
         </div>
 
