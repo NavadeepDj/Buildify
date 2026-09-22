@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/ai_server_models.dart';
 import '../services/native_server_bridge.dart';
+import '../services/mdns_service.dart';
 import '../backend/embedded_backend.dart';
 
 const _catalogRemoteUrl =
@@ -119,6 +120,8 @@ class AiServerController extends StateNotifier<AiServerState> {
     unawaited(_hydrateNativeState());
     unawaited(_loadSecuritySettings());
   }
+
+  final _discoveryBeacon = BuildifyDiscoveryBeacon();
 
   Future<void> refreshCatalog() async {
     try {
@@ -650,6 +653,7 @@ class AiServerController extends StateNotifier<AiServerState> {
             live.status == 'stopped' &&
             state.status == ServerStatus.running) {
           _uptimeTimer?.cancel();
+          _discoveryBeacon.stop();
           _startedAt = null;
           state = state.copyWith(
             status: ServerStatus.stopped,
@@ -672,6 +676,7 @@ class AiServerController extends StateNotifier<AiServerState> {
       port: live.port,
     );
     _appendLog('server running on $apiBaseUrl', LogType.system);
+    unawaited(_discoveryBeacon.start(serverPort: live.port, modelName: selectedModel.name));
   }
 
   Future<void> stopServer() async {
@@ -695,6 +700,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     }
 
     _uptimeTimer?.cancel();
+    _discoveryBeacon.stop();
     _startedAt = null;
     state = state.copyWith(
       status: ServerStatus.stopped,
@@ -916,6 +922,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     _downloadClients.clear();
     _uptimeTimer?.cancel();
     _metricsTimer?.cancel();
+    _discoveryBeacon.stop();
     super.dispose();
   }
 

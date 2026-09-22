@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "buildify-ai"
+version = "0.1.0"
+description = "Official Python SDK for Buildify Edge AI Server running on Android phones with auto-discovery and Gemini 2.0 Flash fallback"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Buildify Team" }
+]
+keywords = ["buildify", "edge-ai", "llm", "local-ai", "gemini", "llama", "android"]
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+gemini = [
+    "google-genai>=2.0.0",
+]
+discovery = [
+    "zeroconf>=0.130.0",
+]
+all = [
+    "buildify-ai[gemini,discovery]",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
