@@ -79,7 +79,7 @@ export function Hero() {
         </TextAnimate>
 
         <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-          <Link href="/#waitlist">
+          <Link href="/download">
             <ShimmerButton
               className="shadow-2xl"
               shimmerColor="#9adfff"
