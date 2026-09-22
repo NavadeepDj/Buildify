@@ -125,6 +125,7 @@ class BackendSession {
     required this.requestCount,
     required this.rps,
     required this.lowBattery,
+    this.tunnelError,
   });
 
   final String id;
@@ -136,6 +137,7 @@ class BackendSession {
   final int requestCount;
   final double rps;
   final bool lowBattery;
+  final String? tunnelError;
 
   BackendSession copyWith({
     bool? isRunning,
@@ -144,6 +146,7 @@ class BackendSession {
     int? requestCount,
     double? rps,
     bool? lowBattery,
+    String? tunnelError,
   }) {
     return BackendSession(
       id: id,
@@ -155,6 +158,7 @@ class BackendSession {
       requestCount: requestCount ?? this.requestCount,
       rps: rps ?? this.rps,
       lowBattery: lowBattery ?? this.lowBattery,
+      tunnelError: tunnelError ?? this.tunnelError,
     );
   }
 }
@@ -478,6 +482,7 @@ class EmbeddedBackendService {
       requestCount: 0,
       rps: 0,
       lowBattery: false,
+      tunnelError: null,
     );
     _updateProject(projectId, (p) => p.copyWith(isLive: true));
     _emit(_state.copyWith(activeSession: session));
@@ -488,9 +493,9 @@ class EmbeddedBackendService {
       if (current == null || !current.isRunning) return;
 
       final status = await _nativeBridge.getTunnelStatus();
-      if (status != null && status.publicUrl != null && status.publicUrl!.isNotEmpty) {
-         if (current.publicUrl != status.publicUrl) {
-           final next = current.copyWith(publicUrl: status.publicUrl);
+      if (status != null) {
+         if (status.publicUrl != null && status.publicUrl!.isNotEmpty && current.publicUrl != status.publicUrl) {
+           final next = current.copyWith(publicUrl: status.publicUrl, tunnelError: status.lastError);
            _emit(_state.copyWith(activeSession: next));
            
            _log(
@@ -498,6 +503,16 @@ class EmbeddedBackendService {
               current.id,
               '-- tunnel active at ${status.publicUrl} --',
               BackendLogType.system,
+           );
+         } else if (status.lastError != null && current.tunnelError != status.lastError) {
+           final next = current.copyWith(tunnelError: status.lastError);
+           _emit(_state.copyWith(activeSession: next));
+           
+           _log(
+              projectId,
+              current.id,
+              '[ERR] Tunnel error: ${status.lastError}',
+              BackendLogType.error,
            );
          }
       }

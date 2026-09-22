@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../backend/embedded_backend.dart';
 import '../providers/ai_server_provider.dart';
+import '../services/native_server_bridge.dart';
 
 class ProjectDetailPage extends ConsumerStatefulWidget {
   const ProjectDetailPage({super.key, required this.projectId});
@@ -25,6 +27,18 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
   void initState() {
     super.initState();
     _logSearchController.addListener(() => setState(() {}));
+    _loadLocalIp();
+  }
+
+  String _localIp = '127.0.0.1';
+
+  Future<void> _loadLocalIp() async {
+    try {
+      final ip = await const NativeServerBridge().getLocalIp();
+      if (ip != null && ip.isNotEmpty && mounted) {
+        setState(() => _localIp = ip);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -34,11 +48,63 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
     super.dispose();
   }
 
-  Future<void> _openUrl(String url) async {
+  bool _isCheckingReachability = false;
+
+  Future<bool> _isServerReachable(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final socket = await Socket.connect(
+        uri.host,
+        uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port,
+        timeout: const Duration(seconds: 3),
+      );
+      socket.destroy();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _openUrl(String url, {bool checkReachability = false}) async {
+    if (checkReachability) {
+      if (_isCheckingReachability) return;
+      setState(() => _isCheckingReachability = true);
+      try {
+        final reachable = await _isServerReachable(url);
+        if (!reachable) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Server not reachable. Make sure the server is running.',
+                        style: GoogleFonts.spaceMono(fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.redAccent.shade700,
+                duration: const Duration(seconds: 4),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
+          return;
+        }
+      } finally {
+        if (mounted) setState(() => _isCheckingReachability = false);
+      }
+    }
+
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not open $url')),
@@ -66,7 +132,14 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
 
     final activeSession = backendState.activeSession;
     final isSessionActive = activeSession != null && activeSession.projectId == project.id;
-    final liveUrl = isSessionActive ? activeSession.publicUrl : 'http://localhost:${project.port}';
+    final localUrl = 'http://$_localIp:${project.port}';
+    final tunnelUrl = isSessionActive ? activeSession.publicUrl : null;
+    // Only show as tunnel URL if it's a real Cloudflare tunnel (trycloudflare.com), not a placeholder
+    final bool hasTunnelUrl = tunnelUrl != null &&
+        tunnelUrl.isNotEmpty &&
+        !tunnelUrl.contains('localhost') &&
+        !tunnelUrl.contains('buildify.app') &&
+        tunnelUrl != localUrl;
 
     final logs = backendState.logs.where((l) => l.projectId == project.id).toList();
     final filteredLogs = logs.where((l) {
@@ -217,8 +290,9 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                   const Divider(color: Colors.white10),
                   const SizedBox(height: 12),
 
+                  // === LOCAL LAN LINK ===
                   Text(
-                    'LIVE PUBLIC ENDPOINT',
+                    'LOCAL NETWORK LINK',
                     style: GoogleFonts.spaceMono(
                       fontSize: 11,
                       color: Colors.white38,
@@ -232,13 +306,21 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white12),
+                      border: Border.all(
+                        color: project.isLive ? const Color(0xFF34D399).withValues(alpha: 0.3) : Colors.white12,
+                      ),
                     ),
                     child: Row(
                       children: [
+                        Icon(
+                          Icons.lan_outlined,
+                          size: 16,
+                          color: project.isLive ? const Color(0xFF34D399) : Colors.white30,
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: SelectableText(
-                            liveUrl,
+                            localUrl,
                             style: GoogleFonts.spaceMono(
                               fontSize: 13,
                               color: project.isLive ? const Color(0xFF34D399) : Colors.white70,
@@ -248,23 +330,180 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
-                          tooltip: 'Copy URL',
+                          tooltip: 'Copy Local URL',
                           onPressed: () {
-                            Clipboard.setData(ClipboardData(text: liveUrl));
+                            Clipboard.setData(ClipboardData(text: localUrl));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('URL copied to clipboard!')),
+                              const SnackBar(content: Text('Local URL copied to clipboard!')),
                             );
                           },
                         ),
                         if (project.isLive)
-                          IconButton(
-                            icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF34D399)),
-                            tooltip: 'Open in Browser',
-                            onPressed: () => _openUrl(liveUrl),
-                          ),
+                          _isCheckingReachability
+                              ? const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF34D399),
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF34D399)),
+                                  tooltip: 'Open in Browser',
+                                  onPressed: () => _openUrl(localUrl, checkReachability: true),
+                                ),
                       ],
                     ),
                   ),
+                  if (!project.isLive)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 13, color: Colors.amber),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Start the server to access this link. Make sure your device is on the same network.',
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 10,
+                                color: Colors.amber.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // === CLOUDFLARE TUNNEL LINK ===
+                  Text(
+                    'CLOUDFLARE TUNNEL LINK',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 11,
+                      color: Colors.white38,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: hasTunnelUrl ? const Color(0xFF60A5FA).withValues(alpha: 0.3) : Colors.white12,
+                      ),
+                    ),
+                    child: hasTunnelUrl
+                        ? Row(
+                            children: [
+                              const Icon(
+                                Icons.cloud_outlined,
+                                size: 16,
+                                color: Color(0xFF60A5FA),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: SelectableText(
+                                  tunnelUrl,
+                                  style: GoogleFonts.spaceMono(
+                                    fontSize: 13,
+                                    color: const Color(0xFF60A5FA),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
+                                tooltip: 'Copy Cloudflare URL',
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: tunnelUrl));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Cloudflare URL copied to clipboard!')),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF60A5FA)),
+                                tooltip: 'Open in Browser',
+                                onPressed: () => _openUrl(tunnelUrl),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Icon(
+                                Icons.cloud_off_outlined,
+                                size: 16,
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  project.isLive
+                                      ? (activeSession?.tunnelError != null
+                                          ? 'Tunnel Error: ${activeSession!.tunnelError}'
+                                          : 'Waiting for Cloudflare tunnel...')
+                                      : 'Start the server to generate a Cloudflare link',
+                                  style: GoogleFonts.spaceMono(
+                                    fontSize: 12,
+                                    color: (project.isLive && activeSession?.tunnelError != null)
+                                        ? Colors.redAccent
+                                        : Colors.white30,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                              if (project.isLive && activeSession?.tunnelError == null)
+                                const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF60A5FA),
+                                    ),
+                                  ),
+                                ),
+                              if (project.isLive && activeSession?.tunnelError != null)
+                                const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    Icons.error_outline,
+                                    color: Colors.redAccent,
+                                    size: 18,
+                                  ),
+                                ),
+                            ],
+                          ),
+                  ),
+                  if (hasTunnelUrl)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.public, size: 13, color: Color(0xFF60A5FA)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'This link is accessible from anywhere on the internet.',
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 10,
+                                color: const Color(0xFF60A5FA).withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),

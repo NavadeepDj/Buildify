@@ -71,9 +71,21 @@ class CloudflareTunnelService : Service() {
     }
 
     private fun runCloudflared(install: CloudflaredBinary.Install, port: Int, tunnelUrl: String?) {
+        // Create a custom resolv.conf so Go's net package uses real DNS servers
+        // instead of [::1]:53 which doesn't work on Android
+        val resolvConf = java.io.File(applicationContext.filesDir, "resolv.conf")
+        try {
+            resolvConf.writeText("nameserver 1.1.1.1\nnameserver 8.8.8.8\n")
+            Log.i(TAG, "Wrote resolv.conf to ${resolvConf.absolutePath}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to write resolv.conf", e)
+        }
+
         val args = mutableListOf(
             install.binary.absolutePath,
             "tunnel",
+            "--edge-ip-version", "4",
+            "--protocol", "quic",
             "--url",
             "http://localhost:$port",
         )
@@ -90,8 +102,12 @@ class CloudflareTunnelService : Service() {
             } else {
                 "${install.nativeDir.absolutePath}:$existingPath"
             }
-            // Helps origin hostname resolution when supported; edge SRV uses patched cloudflared build.
+            // Force Go's DNS resolver to use our custom resolv.conf with real DNS servers
+            pb.environment()["GODEBUG"] = "netdns=go"
+            pb.environment()["RES_OPTIONS"] = "use-vc"
             pb.environment()["TUNNEL_DNS_RESOLVER_ADDRS"] = "1.1.1.1:53,8.8.8.8:53"
+            // Point Go to our custom resolv.conf
+            pb.environment()["RESOLV_CONF"] = resolvConf.absolutePath
             pb.redirectErrorStream(true)
 
             val proc = try {
