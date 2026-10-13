@@ -24,6 +24,7 @@ class DesktopServerBridge implements ServerBridge {
 
   Process? _tunnelProc;
   String? _tunnelUrl;
+  bool _isGateway = false;
   String? _tunnelError;
   String _tunnelStatus = 'stopped';
 
@@ -169,22 +170,28 @@ class DesktopServerBridge implements ServerBridge {
   }
 
   @override
-  Future<NativeTunnelResponse> startTunnel({required int port, String? tunnelUrl}) async {
+  Future<NativeTunnelResponse> startTunnel({required int port, String? tunnelUrl, String? tunnelToken}) async {
     if (_tunnelProc != null) {
-      return NativeTunnelResponse(ok: true, status: _tunnelStatus);
+      return NativeTunnelResponse(ok: _isGateway == (tunnelToken != null), status: _tunnelStatus,
+        message: 'Stop the active tunnel before switching tunnel modes.');
     }
     _tunnelUrl = null;
     _tunnelError = null;
+    _isGateway = tunnelToken != null;
     _tunnelStatus = 'starting';
     try {
       final bin = await _resolveBinary('cloudflared', 'BUILDIFY_CLOUDFLARED');
       _tunnelProc = await Process.start(
         bin,
-        ['tunnel', '--url', 'http://127.0.0.1:$port'],
+        tunnelToken == null
+            ? ['tunnel', '--url', 'http://127.0.0.1:$port']
+            : ['tunnel', '--no-autoupdate', 'run'],
+        environment: tunnelToken == null ? null : {'TUNNEL_TOKEN': tunnelToken},
         runInShell: true,
       );
       // trycloudflare prints the assigned URL to stderr.
       void scan(String line) {
+        if (tunnelToken != null && line.contains('Registered tunnel connection')) { _tunnelStatus = 'running'; }
         final match = RegExp(r'https://[a-z0-9-]+\.trycloudflare\.com').firstMatch(line);
         if (match != null) {
           _tunnelUrl = match.group(0);
@@ -225,6 +232,7 @@ class DesktopServerBridge implements ServerBridge {
     return NativeTunnelStatus(
       status: _tunnelStatus,
       publicUrl: _tunnelUrl,
+      isGateway: _isGateway,
       lastError: _tunnelError,
     );
   }

@@ -13,6 +13,7 @@ import '../models/ai_server_models.dart';
 import '../services/native_server_bridge.dart';
 import '../services/server_bridge_factory.dart';
 import '../services/mdns_service.dart';
+import '../services/live_url_service.dart';
 import '../backend/embedded_backend.dart';
 
 const _catalogRemoteUrl =
@@ -20,8 +21,10 @@ const _catalogRemoteUrl =
 
 final aiServerProvider =
     StateNotifierProvider<AiServerController, AiServerState>((ref) {
-  return AiServerController();
-});
+      return AiServerController(
+        liveUrls: ref.watch(embeddedBackendProvider).liveUrls,
+      );
+    });
 
 final embeddedBackendProvider = Provider<EmbeddedBackendService>((ref) {
   final service = EmbeddedBackendService();
@@ -40,42 +43,123 @@ final backendStateProvider = StreamProvider<BackendState>((ref) {
 });
 
 class AiServerController extends StateNotifier<AiServerState> {
-  AiServerController()
-      : super(
-          AiServerState(
-            models: const [],
-            downloads: {},
-            device: const DeviceSnapshot(
-              ramGb: 8,
-              availRamGb: 4.0,
-              freeStorageGb: 43.6,
-              batteryPercent: 72,
-              batteryCharging: false,
-              ipAddress: '192.168.0.121',
-              tailscaleIp: null,
-              cpuLabel: '8-core ARM',
-            ),
-            selectedModelId: '',
-            status: ServerStatus.stopped,
-            port: 8080,
-            requestCount: 0,
-            requestsPerSecond: 0,
-            uptime: Duration.zero,
-            lowPowerMode: false,
-            temperature: 0.7,
-            tokenLimit: 100,
-            logs: const [
-              ServerLog(
-                'runtime ready: waiting for model selection',
-                LogType.system,
-              ),
-            ],
-            chat: const [],
-            security: SecuritySettings.empty,
-            tunnel: const TunnelState(status: TunnelStatus.stopped),
+  AiServerController({this.liveUrls})
+    : super(
+        AiServerState(
+          models: const [],
+          downloads: {},
+          device: const DeviceSnapshot(
+            ramGb: 8,
+            availRamGb: 4.0,
+            freeStorageGb: 43.6,
+            batteryPercent: 72,
+            batteryCharging: false,
+            ipAddress: '192.168.0.121',
+            tailscaleIp: null,
+            cpuLabel: '8-core ARM',
           ),
-        ) {
+          selectedModelId: '',
+          status: ServerStatus.stopped,
+          port: 8080,
+          requestCount: 0,
+          requestsPerSecond: 0,
+          uptime: Duration.zero,
+          lowPowerMode: false,
+          temperature: 0.7,
+          tokenLimit: 100,
+          logs: [
+            ServerLog(
+              'runtime ready: waiting for model selection',
+              LogType.system,
+            ),
+          ],
+          chat: const [],
+          security: SecuritySettings.empty,
+          tunnel: const TunnelState(status: TunnelStatus.stopped),
+        ),
+      ) {
     unawaited(_loadCatalogAndHydrate());
+  }
+
+  final LiveUrlService? liveUrls;
+  String? namedUrl;
+  String namedUrlStatus = 'Stopped';
+  Timer? _namedUrlTimer;
+  int _namedUrlEpoch = 0;
+  bool _namedUrlBusy = false;
+
+  Future<bool> _namedUrlHealthy(String url) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$url/__buildify_health'))
+          .timeout(const Duration(seconds: 10));
+      return response.statusCode == 200 && response.body == 'ai-model';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> startNamedTunnel(String projectName) async {
+    if (_namedUrlBusy || namedUrlStatus == 'Live') return;
+    final urls = liveUrls;
+    if (urls == null) throw StateError('Project gateway unavailable');
+    if (state.status != ServerStatus.running) {
+      throw StateError('Start the AI server before connecting the subdomain.');
+    }
+    if (state.tunnel.status == TunnelStatus.running ||
+        state.tunnel.status == TunnelStatus.starting) {
+      await stopTunnel();
+    }
+    if (state.status != ServerStatus.running) return;
+    final epoch = ++_namedUrlEpoch;
+    _namedUrlBusy = true;
+    namedUrlStatus = 'Connecting';
+    state = state.copyWith();
+    try {
+      namedUrl = await urls.registerAiRoute(projectName, state.port);
+      if (epoch != _namedUrlEpoch || state.status != ServerStatus.running) {
+        urls.unregisterAiRoute();
+        return;
+      }
+      await urls.gateway.start(urls.routerPort);
+      var healthy = false;
+      for (var attempt = 0; attempt < 6; attempt++) {
+        if (epoch != _namedUrlEpoch || state.status != ServerStatus.running) {
+          return;
+        }
+        healthy = await _namedUrlHealthy(namedUrl!);
+        if (healthy) break;
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+      if (epoch != _namedUrlEpoch || state.status != ServerStatus.running) {
+        return;
+      }
+      if (!healthy) {
+        throw StateError(
+          'Connector connected, but the subdomain does not reach this AI server. Check wildcard DNS and ingress to localhost:8787.',
+        );
+      }
+      namedUrlStatus = 'Live';
+      _updateBeaconTunnelUrl(namedUrl);
+    } catch (_) {
+      if (epoch == _namedUrlEpoch && state.status == ServerStatus.running) {
+        namedUrlStatus = 'Reconnecting';
+      }
+      rethrow;
+    } finally {
+      _namedUrlBusy = false;
+      if (mounted) state = state.copyWith();
+    }
+  }
+
+  void stopNamedTunnel() {
+    ++_namedUrlEpoch;
+    _namedUrlTimer?.cancel();
+    _namedUrlTimer = null;
+    liveUrls?.unregisterAiRoute();
+    namedUrlStatus = 'Stopped';
+    _updateBeaconTunnelUrl(state.tunnel.publicUrl);
+    state = state.copyWith();
   }
 
   static List<ModelProfile> _parseCatalog(String jsonStr) {
@@ -89,9 +173,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   Future<void> _loadCatalogAndHydrate() async {
     List<ModelProfile> catalog;
     try {
-      final bundled = await rootBundle.loadString(
-        'assets/models/catalog.json',
-      );
+      final bundled = await rootBundle.loadString('assets/models/catalog.json');
       catalog = _parseCatalog(bundled);
     } catch (e) {
       catalog = const [];
@@ -107,18 +189,22 @@ class AiServerController extends StateNotifier<AiServerState> {
       );
     }
     final savedModelId = await _secure.read(key: _kSecSelectedModelId);
-    final initialModelId = (savedModelId != null &&
-            savedModelId.isNotEmpty &&
-            catalog.any((m) => m.id == savedModelId))
-        ? savedModelId
-        : (catalog.isEmpty ? '' : catalog.first.id);
+    final initialModelId =
+        (savedModelId != null &&
+                savedModelId.isNotEmpty &&
+                catalog.any((m) => m.id == savedModelId))
+            ? savedModelId
+            : (catalog.isEmpty ? '' : catalog.first.id);
 
     state = state.copyWith(
       models: catalog,
       selectedModelId: initialModelId,
       downloads: downloads,
     );
-    _appendLog('loaded ${catalog.length} model(s) from catalog', LogType.system);
+    _appendLog(
+      'loaded ${catalog.length} model(s) from catalog',
+      LogType.system,
+    );
     unawaited(_loadCustomModels());
     unawaited(_hydrateNativeState());
     unawaited(_loadSecuritySettings());
@@ -156,14 +242,15 @@ class AiServerController extends StateNotifier<AiServerState> {
         }
       }
       final savedModelId = await _secure.read(key: _kSecSelectedModelId);
-      final selectedId = (savedModelId != null &&
-              savedModelId.isNotEmpty &&
-              catalog.any((m) => m.id == savedModelId))
-          ? savedModelId
-          : (state.selectedModelId.isNotEmpty &&
-                  catalog.any((m) => m.id == state.selectedModelId)
-              ? state.selectedModelId
-              : catalog.first.id);
+      final selectedId =
+          (savedModelId != null &&
+                  savedModelId.isNotEmpty &&
+                  catalog.any((m) => m.id == savedModelId))
+              ? savedModelId
+              : (state.selectedModelId.isNotEmpty &&
+                      catalog.any((m) => m.id == state.selectedModelId)
+                  ? state.selectedModelId
+                  : catalog.first.id);
       state = state.copyWith(
         models: catalog,
         selectedModelId: selectedId,
@@ -199,8 +286,15 @@ class AiServerController extends StateNotifier<AiServerState> {
   // has not loaded yet. Callers that start the server guard against the blank
   // placeholder via the download-status check.
   static final _blankModel = ModelProfile(
-    id: '', name: '', fileName: '', downloadUrl: '',
-    sizeLabel: '', speed: '', quality: '', requiredRamGb: 0, description: '',
+    id: '',
+    name: '',
+    fileName: '',
+    downloadUrl: '',
+    sizeLabel: '',
+    speed: '',
+    quality: '',
+    requiredRamGb: 0,
+    description: '',
   );
 
   ModelProfile get selectedModel {
@@ -251,8 +345,14 @@ class AiServerController extends StateNotifier<AiServerState> {
       );
     }
     await _scanExistingModels();
+    if (state.status == ServerStatus.running) {
+      unawaited(_autoConnectNamedTunnel());
+    }
     _refreshMetrics();
-    _metricsTimer = Timer.periodic(const Duration(seconds: 10), (_) => _refreshMetrics());
+    _metricsTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _refreshMetrics(),
+    );
   }
 
   void _refreshMetrics() {
@@ -261,10 +361,18 @@ class AiServerController extends StateNotifier<AiServerState> {
       state = state.copyWith(
         device: state.device.copyWith(
           ramGb: (metrics['ramGb'] as num?)?.toInt() ?? state.device.ramGb,
-          availRamGb: (metrics['availRamGb'] as num?)?.toDouble() ?? state.device.availRamGb,
-          freeStorageGb: (metrics['freeStorageGb'] as num?)?.toDouble() ?? state.device.freeStorageGb,
-          batteryPercent: (metrics['batteryPercent'] as num?)?.toInt() ?? state.device.batteryPercent,
-          batteryCharging: (metrics['batteryCharging'] as bool?) ?? state.device.batteryCharging,
+          availRamGb:
+              (metrics['availRamGb'] as num?)?.toDouble() ??
+              state.device.availRamGb,
+          freeStorageGb:
+              (metrics['freeStorageGb'] as num?)?.toDouble() ??
+              state.device.freeStorageGb,
+          batteryPercent:
+              (metrics['batteryPercent'] as num?)?.toInt() ??
+              state.device.batteryPercent,
+          batteryCharging:
+              (metrics['batteryCharging'] as bool?) ??
+              state.device.batteryCharging,
           cpuLabel: (metrics['cpuLabel'] as String?) ?? state.device.cpuLabel,
         ),
       );
@@ -318,17 +426,16 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<void> setRequireApiKey(bool value) async {
-    state = state.copyWith(security: state.security.copyWith(requireApiKey: value));
+    state = state.copyWith(
+      security: state.security.copyWith(requireApiKey: value),
+    );
     await _secure.write(key: _kSecRequire, value: value ? '1' : '0');
     _appendLog(
       value ? 'api key required for incoming requests' : 'api key disabled',
       LogType.system,
     );
     if (state.status == ServerStatus.running) {
-      _appendLog(
-        'restart the server to apply api key change',
-        LogType.warning,
-      );
+      _appendLog('restart the server to apply api key change', LogType.warning);
     }
   }
 
@@ -359,7 +466,9 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<void> setThermalStop(bool value) async {
-    state = state.copyWith(security: state.security.copyWith(thermalStop: value));
+    state = state.copyWith(
+      security: state.security.copyWith(thermalStop: value),
+    );
     await _secure.write(key: _kSecThermal, value: value ? '1' : '0');
   }
 
@@ -431,8 +540,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     final part = File('${target.path}.part');
     // Keep existing .part for resume; only delete if the final file already exists
     // but wasn't detected as downloaded (size check failed).
-    final existingBytes =
-        await part.exists() ? await part.length() : 0;
+    final existingBytes = await part.exists() ? await part.length() : 0;
 
     _setDownload(
       modelId,
@@ -499,9 +607,8 @@ class AiServerController extends StateNotifier<AiServerState> {
 
     final contentLength = resp.contentLength ?? 0;
     final total = isResume ? existingBytes + contentLength : contentLength;
-    final sink = isResume
-        ? part.openWrite(mode: FileMode.append)
-        : part.openWrite();
+    final sink =
+        isResume ? part.openWrite(mode: FileMode.append) : part.openWrite();
     var received = isResume ? existingBytes : 0;
     var lastReportedProgress = total > 0 ? received / total : -1.0;
 
@@ -691,6 +798,7 @@ class AiServerController extends StateNotifier<AiServerState> {
             live.status == 'stopped' &&
             state.status == ServerStatus.running) {
           _uptimeTimer?.cancel();
+          stopNamedTunnel();
           _discoveryBeacon.stop();
           _startedAt = null;
           state = state.copyWith(
@@ -714,8 +822,14 @@ class AiServerController extends StateNotifier<AiServerState> {
       port: live.port,
     );
     _appendLog('server running on $apiBaseUrl', LogType.system);
+    unawaited(_autoConnectNamedTunnel());
     // Start beacon without tunnel URL; it will be updated once the tunnel resolves.
-    unawaited(_discoveryBeacon.start(serverPort: live.port, modelName: selectedModel.name));
+    unawaited(
+      _discoveryBeacon.start(
+        serverPort: live.port,
+        modelName: selectedModel.name,
+      ),
+    );
   }
 
   /// Called from _pollTunnelStatus once the public URL is known — restarts the
@@ -723,14 +837,53 @@ class AiServerController extends StateNotifier<AiServerState> {
   void _updateBeaconTunnelUrl(String? tunnelUrl) {
     if (!_discoveryBeacon.isRunning) return;
     _discoveryBeacon.stop();
-    unawaited(_discoveryBeacon.start(
-      serverPort: state.port,
-      modelName: selectedModel.name,
-      tunnelUrl: tunnelUrl,
-    ));
+    unawaited(
+      _discoveryBeacon.start(
+        serverPort: state.port,
+        modelName: selectedModel.name,
+        tunnelUrl: tunnelUrl,
+      ),
+    );
+  }
+
+  Future<void> _autoConnectNamedTunnel() async {
+    final urls = liveUrls;
+    if (urls == null) return;
+    try {
+      if (state.status != ServerStatus.running) return;
+      _namedUrlTimer ??= Timer.periodic(const Duration(seconds: 15), (_) {
+        unawaited(_refreshNamedTunnel());
+      });
+      await startNamedTunnel('${selectedModel.name}-server');
+    } catch (_) {
+      if (!mounted || state.status != ServerStatus.running) return;
+      _appendLog(
+        'Project subdomain is reconnecting automatically.',
+        LogType.warning,
+      );
+    }
+  }
+
+  Future<void> _refreshNamedTunnel() async {
+    if (!mounted || state.status != ServerStatus.running || _namedUrlBusy) {
+      return;
+    }
+    final epoch = _namedUrlEpoch;
+    if (namedUrlStatus == 'Live' && namedUrl != null) {
+      if (await _namedUrlHealthy(namedUrl!)) return;
+      if (!mounted ||
+          epoch != _namedUrlEpoch ||
+          state.status != ServerStatus.running) {
+        return;
+      }
+      namedUrlStatus = 'Reconnecting';
+      state = state.copyWith();
+    }
+    await _autoConnectNamedTunnel();
   }
 
   Future<void> stopServer() async {
+    stopNamedTunnel();
     if (state.status == ServerStatus.stopped ||
         state.status == ServerStatus.stopping) {
       return;
@@ -739,6 +892,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     final response = await _native.stopServer();
     if (!response.ok) {
       state = state.copyWith(status: ServerStatus.running);
+      unawaited(_autoConnectNamedTunnel());
       _appendLog('native stop failed: ${response.message}', LogType.warning);
       return;
     }
@@ -762,6 +916,13 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<bool> startTunnel() async {
+    if (namedUrlStatus == 'Live' || namedUrlStatus == 'Connecting') {
+      _appendLog(
+        'The project subdomain is managed automatically with the AI server.',
+        LogType.warning,
+      );
+      return false;
+    }
     if (state.tunnel.status == TunnelStatus.running ||
         state.tunnel.status == TunnelStatus.starting) {
       return false;
@@ -770,12 +931,20 @@ class AiServerController extends StateNotifier<AiServerState> {
       _appendLog('start the AI server before enabling tunnel', LogType.warning);
       return false;
     }
-    state = state.copyWith(tunnel: const TunnelState(status: TunnelStatus.starting));
-    _appendLog('starting cloudflare tunnel on port ${state.port}', LogType.system);
+    state = state.copyWith(
+      tunnel: const TunnelState(status: TunnelStatus.starting),
+    );
+    _appendLog(
+      'starting cloudflare tunnel on port ${state.port}',
+      LogType.system,
+    );
     final response = await _native.startTunnel(port: state.port);
     if (!response.ok) {
       state = state.copyWith(
-        tunnel: TunnelState(status: TunnelStatus.failed, lastError: response.message),
+        tunnel: TunnelState(
+          status: TunnelStatus.failed,
+          lastError: response.message,
+        ),
       );
       _appendLog('tunnel start failed: ${response.message}', LogType.warning);
       return false;
@@ -786,12 +955,15 @@ class AiServerController extends StateNotifier<AiServerState> {
 
   Future<void> stopTunnel() async {
     if (state.tunnel.status == TunnelStatus.stopped) return;
-    state = state.copyWith(tunnel: const TunnelState(status: TunnelStatus.stopped));
+    state = state.copyWith(
+      tunnel: const TunnelState(status: TunnelStatus.stopped),
+    );
     await _native.stopTunnel();
     _appendLog('cloudflare tunnel stopped', LogType.system);
   }
 
   void _pollTunnelStatus({int attempt = 0}) {
+    if (!mounted || state.tunnel.status != TunnelStatus.starting) return;
     const maxAttempts = 15; // 30 s ceiling at 2 s/poll
     if (attempt >= maxAttempts) {
       state = state.copyWith(
@@ -800,15 +972,23 @@ class AiServerController extends StateNotifier<AiServerState> {
           lastError: 'tunnel startup timed out',
         ),
       );
-      _appendLog('tunnel startup timed out after ${maxAttempts * 2}s', LogType.warning);
+      _appendLog(
+        'tunnel startup timed out after ${maxAttempts * 2}s',
+        LogType.warning,
+      );
       return;
     }
     Future.delayed(const Duration(seconds: 2), () async {
+      if (!mounted || state.tunnel.status != TunnelStatus.starting) return;
       final live = await _native.getTunnelStatus();
+      if (!mounted || state.tunnel.status != TunnelStatus.starting) return;
       if (live == null) {
         if (state.tunnel.status == TunnelStatus.starting) {
           state = state.copyWith(
-            tunnel: const TunnelState(status: TunnelStatus.failed, lastError: 'no response from native'),
+            tunnel: const TunnelState(
+              status: TunnelStatus.failed,
+              lastError: 'no response from native',
+            ),
           );
         }
         return;
@@ -981,10 +1161,11 @@ class AiServerController extends StateNotifier<AiServerState> {
       final file = await _customModelsFile;
       if (!await file.exists()) return;
       final list = jsonDecode(await file.readAsString()) as List<dynamic>;
-      final custom = list
-          .whereType<Map<String, dynamic>>()
-          .map(ModelProfile.fromJson)
-          .toList();
+      final custom =
+          list
+              .whereType<Map<String, dynamic>>()
+              .map(ModelProfile.fromJson)
+              .toList();
       if (custom.isEmpty) return;
       final merged = [...state.models];
       final existingIds = merged.map((m) => m.id).toSet();
@@ -1004,20 +1185,23 @@ class AiServerController extends StateNotifier<AiServerState> {
 
   Future<void> _saveCustomModels() async {
     try {
-      final custom = state.models
-          .where((m) => m.id.startsWith('custom_'))
-          .map((m) => {
-                'id': m.id,
-                'name': m.name,
-                'fileName': m.fileName,
-                'downloadUrl': m.downloadUrl,
-                'sizeLabel': m.sizeLabel,
-                'speed': m.speed,
-                'quality': m.quality,
-                'requiredRamGb': m.requiredRamGb,
-                'description': m.description,
-              })
-          .toList();
+      final custom =
+          state.models
+              .where((m) => m.id.startsWith('custom_'))
+              .map(
+                (m) => {
+                  'id': m.id,
+                  'name': m.name,
+                  'fileName': m.fileName,
+                  'downloadUrl': m.downloadUrl,
+                  'sizeLabel': m.sizeLabel,
+                  'speed': m.speed,
+                  'quality': m.quality,
+                  'requiredRamGb': m.requiredRamGb,
+                  'description': m.description,
+                },
+              )
+              .toList();
       final file = await _customModelsFile;
       await file.writeAsString(jsonEncode(custom));
     } catch (_) {}
@@ -1046,9 +1230,8 @@ class AiServerController extends StateNotifier<AiServerState> {
         speed: 'varies',
         quality: 'custom',
         requiredRamGb: 4,
-        description: description.isNotEmpty
-            ? description
-            : 'Custom model: $displayName',
+        description:
+            description.isNotEmpty ? description : 'Custom model: $displayName',
       );
       state = state.copyWith(
         models: [...state.models, profile],
@@ -1078,8 +1261,10 @@ class AiServerController extends StateNotifier<AiServerState> {
     _modelBasePath ??= await _native.getModelBasePath();
     final base = _modelBasePath;
     if (base == null || base.isEmpty) {
-      _appendLog('import failed: cannot resolve models directory',
-          LogType.warning);
+      _appendLog(
+        'import failed: cannot resolve models directory',
+        LogType.warning,
+      );
       return;
     }
     await Directory(base).create(recursive: true);
@@ -1101,9 +1286,10 @@ class AiServerController extends StateNotifier<AiServerState> {
 
     if (!state.models.any((m) => m.id == id)) {
       final fileSize = await target.length();
-      final sizeLabel = fileSize >= 1024 * 1024 * 1024
-          ? '${(fileSize / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB'
-          : '${(fileSize / (1024 * 1024)).round()} MB';
+      final sizeLabel =
+          fileSize >= 1024 * 1024 * 1024
+              ? '${(fileSize / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB'
+              : '${(fileSize / (1024 * 1024)).round()} MB';
       final profile = ModelProfile(
         id: id,
         name: displayName,
@@ -1143,12 +1329,16 @@ class AiServerController extends StateNotifier<AiServerState> {
   Future<void> deleteModel(String modelId) async {
     if (modelId == state.selectedModelId &&
         state.status == ServerStatus.running) {
-      _appendLog('stop the server before deleting the active model',
-          LogType.warning);
+      _appendLog(
+        'stop the server before deleting the active model',
+        LogType.warning,
+      );
       return;
     }
-    final model =
-        state.models.firstWhere((m) => m.id == modelId, orElse: () => state.models.first);
+    final model = state.models.firstWhere(
+      (m) => m.id == modelId,
+      orElse: () => state.models.first,
+    );
 
     final base = _modelBasePath;
     if (base != null && base.isNotEmpty) {
@@ -1195,6 +1385,9 @@ class AiServerController extends StateNotifier<AiServerState> {
 
   @override
   void dispose() {
+    ++_namedUrlEpoch;
+    _namedUrlTimer?.cancel();
+    liveUrls?.unregisterAiRoute();
     for (final sub in _downloadSubs.values) {
       try {
         sub.cancel();

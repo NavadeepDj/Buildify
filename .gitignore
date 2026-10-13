@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+*.pptx
 .DS_Store
 .atom/
 .build/
@@ -93,6 +94,7 @@ demo-video/
 
 # Marketing site (website/) — Node-side ignores
 website/node_modules
+scripts/node_modules/
 website/.next
 website/.vercel
 website/.data

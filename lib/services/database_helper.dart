@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
@@ -36,15 +35,27 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE projects ADD COLUMN live_url TEXT');
+      await db.execute(
+        "ALTER TABLE projects ADD COLUMN live_url_status TEXT NOT NULL DEFAULT 'Stopped'",
+      );
+      await db.execute('UPDATE projects SET subdomain = NULL');
+      await db.execute(
+        'CREATE UNIQUE INDEX projects_subdomain_unique ON projects(subdomain)',
+      );
+    }
     if (oldVersion < 2) {
-      await db.execute('ALTER TABLE projects ADD COLUMN branch TEXT DEFAULT \'main\'');
+      await db.execute(
+        'ALTER TABLE projects ADD COLUMN branch TEXT DEFAULT \'main\'',
+      );
       await db.execute('ALTER TABLE projects ADD COLUMN build_command TEXT');
       await db.execute('ALTER TABLE projects ADD COLUMN publish_dir TEXT');
       await db.execute('ALTER TABLE projects ADD COLUMN base_dir TEXT');
@@ -62,6 +73,8 @@ class DatabaseHelper {
         local_path TEXT NOT NULL,
         port INTEGER NOT NULL,
         subdomain TEXT,
+        live_url TEXT,
+        live_url_status TEXT NOT NULL DEFAULT 'Stopped',
         env_vars TEXT,
         branch TEXT DEFAULT 'main',
         build_command TEXT,
@@ -73,6 +86,9 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute(
+      'CREATE UNIQUE INDEX projects_subdomain_unique ON projects(subdomain)',
+    );
     await db.execute('''
       CREATE TABLE deployments (
         id TEXT PRIMARY KEY,
@@ -89,7 +105,11 @@ class DatabaseHelper {
   // Project CRUD operations
   Future<int> insertProject(Map<String, dynamic> project) async {
     final db = await database;
-    return await db.insert('projects', project, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'projects',
+      project,
+      conflictAlgorithm: ConflictAlgorithm.abort,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getProjects() async {
@@ -99,7 +119,11 @@ class DatabaseHelper {
 
   Future<Map<String, dynamic>?> getProject(String id) async {
     final db = await database;
-    final results = await db.query('projects', where: 'id = ?', whereArgs: [id]);
+    final results = await db.query(
+      'projects',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     if (results.isNotEmpty) {
       return results.first;
     }
@@ -108,7 +132,12 @@ class DatabaseHelper {
 
   Future<int> updateProject(String id, Map<String, dynamic> updates) async {
     final db = await database;
-    return await db.update('projects', updates, where: 'id = ?', whereArgs: [id]);
+    return await db.update(
+      'projects',
+      updates,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<int> deleteProject(String id) async {
@@ -119,7 +148,11 @@ class DatabaseHelper {
   // Deployment CRUD operations
   Future<int> insertDeployment(Map<String, dynamic> deployment) async {
     final db = await database;
-    return await db.insert('deployments', deployment, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'deployments',
+      deployment,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getDeployments(String projectId) async {

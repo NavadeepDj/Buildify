@@ -5,10 +5,23 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Read only the device connector credential, never account API credentials.
+// This also configures ordinary `flutter run` builds without extra CLI flags.
+val connectorEnv = rootProject.file("../.env")
+val connectorToken = if (connectorEnv.isFile) {
+    connectorEnv.readLines().firstOrNull {
+        it.trimStart().startsWith("CF_TUNNEL_TOKEN=")
+    }?.substringAfter('=')?.trim()?.removeSurrounding("\"")?.removeSurrounding("'") ?: ""
+} else ""
+require(connectorToken.isEmpty() || Regex("[A-Za-z0-9_+/=\\-]{40,}").matches(connectorToken)) {
+    "Invalid CF_TUNNEL_TOKEN in the local .env"
+}
+
 android {
     namespace = "com.example.buildify_flutter"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
+    buildFeatures { buildConfig = true }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -20,6 +33,7 @@ android {
     }
 
     defaultConfig {
+        buildConfigField("String", "CF_TUNNEL_TOKEN", "\"$connectorToken\"")
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.buildify_flutter"
         // You can update the following values to match your application needs.

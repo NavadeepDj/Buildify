@@ -33,6 +33,7 @@ class CloudflareTunnelService : Service() {
             ACTION_START -> {
                 val localPort = intent.getIntExtra(EXTRA_PORT, 8080)
                 val tunnelUrl = intent.getStringExtra(EXTRA_TUNNEL_URL)
+                val tunnelToken = intent.getStringExtra(EXTRA_TUNNEL_TOKEN)
 
                 cleanup()
                 startForeground(NOTIFICATION_ID, createNotification("Starting tunnel on port $localPort"))
@@ -46,11 +47,12 @@ class CloudflareTunnelService : Service() {
                     return START_NOT_STICKY
                 }
 
+                isGateway = !tunnelToken.isNullOrBlank()
                 currentStatus = TunnelStatus.STARTING
                 lastError = null
                 lastPublicUrl = null
 
-                executor.execute { runCloudflared(install, localPort, tunnelUrl) }
+                executor.execute { runCloudflared(install, localPort, tunnelUrl, tunnelToken) }
             }
 
             ACTION_STOP -> {
@@ -70,20 +72,26 @@ class CloudflareTunnelService : Service() {
         super.onDestroy()
     }
 
-    private fun runCloudflared(install: CloudflaredBinary.Install, port: Int, tunnelUrl: String?) {
+    private fun runCloudflared(install: CloudflaredBinary.Install, port: Int, tunnelUrl: String?, tunnelToken: String?) {
         val args = mutableListOf(
             install.binary.absolutePath,
             "tunnel",
             "--url",
             "http://localhost:$port",
         )
-        if (tunnelUrl != null) {
+        if (!tunnelToken.isNullOrBlank()) {
+            args.clear()
+            // Mobile network changes broke the QUIC/IPv6 transport in captured logs.
+            args.addAll(listOf(install.binary.absolutePath, "tunnel", "--no-autoupdate",
+                "--protocol", "http2", "--edge-ip-version", "4", "run"))
+        } else if (tunnelUrl != null) {
             args.addAll(listOf("--hostname", tunnelUrl))
         }
 
         try {
             val pb = ProcessBuilder(args)
             pb.directory(install.nativeDir)
+            if (!tunnelToken.isNullOrBlank()) pb.environment()["TUNNEL_TOKEN"] = tunnelToken
             val existingPath = System.getenv("LD_LIBRARY_PATH").orEmpty()
             pb.environment()["LD_LIBRARY_PATH"] = if (existingPath.isEmpty()) {
                 install.nativeDir.absolutePath
@@ -115,7 +123,15 @@ class CloudflareTunnelService : Service() {
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
                         val l = line ?: continue
-                        Log.i(TAG, l)
+                        val safeLine = if (tunnelToken.isNullOrBlank()) l else l.replace(tunnelToken, "[redacted]")
+                        Log.i(TAG, safeLine)
+                        if (!tunnelToken.isNullOrBlank() && l.contains("Registered tunnel connection")) {
+                            currentStatus = TunnelStatus.RUNNING
+                            mainHandler.post {
+                                getSystemService(NotificationManager::class.java).notify(
+                                    NOTIFICATION_ID, createNotification("Buildiify gateway connected"))
+                            }
+                        }
                         val match = urlPattern.find(l)
                         if (match != null && lastPublicUrl == null) {
                             lastPublicUrl = match.value
@@ -214,10 +230,15 @@ class CloudflareTunnelService : Service() {
         private const val ACTION_STOP = "com.example.buildify_flutter.action.STOP_TUNNEL"
         private const val EXTRA_PORT = "port"
         private const val EXTRA_TUNNEL_URL = "tunnelUrl"
+        private const val EXTRA_TUNNEL_TOKEN = "tunnelToken"
 
         private val executor = Executors.newSingleThreadExecutor()
         private val mainHandler = Handler(Looper.getMainLooper())
         private val autoStopTriggered = AtomicBoolean(false)
+
+        @Volatile
+        var isGateway: Boolean = false
+            internal set
 
         @Volatile
         var currentStatus: TunnelStatus = TunnelStatus.STOPPED
@@ -231,12 +252,13 @@ class CloudflareTunnelService : Service() {
         var lastPublicUrl: String? = null
             internal set
 
-        fun startTunnel(context: Context, port: Int, tunnelUrl: String? = null) {
+        fun startTunnel(context: Context, port: Int, tunnelUrl: String? = null, tunnelToken: String? = null) {
             autoStopTriggered.set(false)
             val intent = Intent(context, CloudflareTunnelService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_PORT, port)
                 if (tunnelUrl != null) putExtra(EXTRA_TUNNEL_URL, tunnelUrl)
+                if (tunnelToken != null) putExtra(EXTRA_TUNNEL_TOKEN, tunnelToken)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)

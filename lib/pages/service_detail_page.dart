@@ -10,6 +10,7 @@ import '../models/ai_server_models.dart';
 import '../providers/ai_server_provider.dart';
 import '../screens/model_store_screen.dart';
 import '../screens/self_test_screen.dart';
+import '../services/subdomain.dart';
 
 /// Project service detail — matches the Project---X HTML screen.
 class ServiceDetailPage extends ConsumerStatefulWidget {
@@ -28,10 +29,7 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
   bool _logsFullscreen = false;
   bool _showCustomRange = false;
   String _timeRange = 'last hour';
-
   // No hardcoded external IDs — identifiers are derived from runtime state.
-
-
 
   @override
   void initState() {
@@ -72,23 +70,36 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
     if (dl == null) return const [];
 
     final now = DateTime.now();
-    final h = now.hour >= 12 ? (now.hour == 12 ? 12 : now.hour - 12) : (now.hour == 0 ? 12 : now.hour);
+    final h =
+        now.hour >= 12
+            ? (now.hour == 12 ? 12 : now.hour - 12)
+            : (now.hour == 0 ? 12 : now.hour);
     final ts =
         '$h:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'pm' : 'am'}';
 
     if (dl.status == ModelDownloadStatus.downloading) {
       final pct = (dl.progress * 100).clamp(0, 100).round();
       return [
-        _LogLine(ts, '[buildify]', 'downloading ${model.name.toLowerCase()}…',
-            createdAt: now, highlight: true),
+        _LogLine(
+          ts,
+          '[buildify]',
+          'downloading ${model.name.toLowerCase()}…',
+          createdAt: now,
+          highlight: true,
+        ),
         _LogLine(ts, '[buildify]', 'progress: $pct%', createdAt: now),
       ];
     }
 
     if (dl.status == ModelDownloadStatus.downloaded) {
       return [
-        _LogLine(ts, '[buildify]', 'model ready on device',
-            createdAt: now, success: true),
+        _LogLine(
+          ts,
+          '[buildify]',
+          'model ready on device',
+          createdAt: now,
+          success: true,
+        ),
       ];
     }
 
@@ -98,7 +109,10 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
   List<_LogLine> _allLogs(AiServerState state) {
     final fromState = state.logs.map((l) {
       final t = l.createdAt;
-      final h = t.hour >= 12 ? (t.hour == 12 ? 12 : t.hour - 12) : (t.hour == 0 ? 12 : t.hour);
+      final h =
+          t.hour >= 12
+              ? (t.hour == 12 ? 12 : t.hour - 12)
+              : (t.hour == 0 ? 12 : t.hour);
       final ts =
           '$h:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')} ${t.hour >= 12 ? 'pm' : 'am'}';
       return _LogLine(
@@ -115,7 +129,6 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
     return [...fromState, ...dlLines];
   }
 
-
   List<_LogLine> _filteredLogs(List<_LogLine> logs) {
     var result = logs;
 
@@ -129,13 +142,14 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
     // Apply text search.
     final q = _logSearchController.text.trim().toLowerCase();
     if (q.isNotEmpty) {
-      result = result
-          .where(
-            (l) =>
-                l.message.toLowerCase().contains(q) ||
-                l.instance.toLowerCase().contains(q),
-          )
-          .toList();
+      result =
+          result
+              .where(
+                (l) =>
+                    l.message.toLowerCase().contains(q) ||
+                    l.instance.toLowerCase().contains(q),
+              )
+              .toList();
     }
     return result;
   }
@@ -151,9 +165,9 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
 
   void _copyServiceId(String apiUrl) {
     Clipboard.setData(ClipboardData(text: apiUrl));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('API URL copied')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('API URL copied')));
   }
 
   void _manualDeploy() {
@@ -174,25 +188,35 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
     // Auto-scroll to newest log when the list grows.
     if (logs.length != _lastLogCount) {
       _lastLogCount = logs.length;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollLogsToBottom());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollLogsToBottom(),
+      );
     }
-    final horizontalPadding = MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
-    final ramUsed = (device.ramGb - device.availRamGb).clamp(0, device.ramGb.toDouble());
-    final ramPct = device.ramGb > 0 ? (ramUsed / device.ramGb * 100).round() : 0;
-    final storagePct = device.freeStorageGb > 0
-        ? ((1 - device.freeStorageGb / (device.freeStorageGb + 8)) * 100).round().clamp(0, 100)
-        : 0;
+    final horizontalPadding =
+        MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
+    final ramUsed = (device.ramGb - device.availRamGb).clamp(
+      0,
+      device.ramGb.toDouble(),
+    );
+    final ramPct =
+        device.ramGb > 0 ? (ramUsed / device.ramGb * 100).round() : 0;
+    final storagePct =
+        device.freeStorageGb > 0
+            ? ((1 - device.freeStorageGb / (device.freeStorageGb + 8)) * 100)
+                .round()
+                .clamp(0, 100)
+            : 0;
     // CPU is not available from native metrics yet — show rps-scaled approximation.
     final cpuPct = (state.requestsPerSecond * 8).clamp(0, 100).round();
     // Derive identifiers from live state rather than hardcoded strings.
     final apiUrl = 'http://${device.ipAddress}:${state.port}';
-    final liveUrl = state.tunnel.publicUrl?.replaceFirst(RegExp(r'^https?://'), '')
-        ?? '${device.ipAddress}:${state.port}';
+    final liveUrl =
+        state.tunnel.publicUrl?.replaceFirst(RegExp(r'^https?://'), '') ??
+        '${device.ipAddress}:${state.port}';
     final serviceId = 'local-ai-${state.port}';
     final repoLabel = model.name.isNotEmpty ? model.name : 'local model';
-    final terminalHeight = _logsFullscreen
-        ? MediaQuery.sizeOf(context).height * 0.75
-        : 400.0;
+    final terminalHeight =
+        _logsFullscreen ? MediaQuery.sizeOf(context).height * 0.75 : 400.0;
 
     return Theme(
       data: ThemeData.dark().copyWith(
@@ -212,173 +236,253 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
                   children: [
                     _DetailTopBar(horizontalPadding: horizontalPadding),
                     Expanded(
-                    child: ColoredBox(
-                      color: _DetailPalette.background,
-                      child: ListView(
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          8,
-                          horizontalPadding,
-                          48,
+                      child: ColoredBox(
+                        color: _DetailPalette.background,
+                        child: ListView(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            8,
+                            horizontalPadding,
+                            48,
+                          ),
+                          children: [
+                            _DetailIntro(
+                              modelName: model.name,
+                              status: state.status,
+                              onManualDeploy: _manualDeploy,
+                            ),
+                            const SizedBox(height: 32),
+                            _MetadataGrid(
+                              serviceId: serviceId,
+                              repo: repoLabel,
+                              liveUrl: liveUrl,
+                              subdomain:
+                                  ref
+                                      .read(aiServerProvider.notifier)
+                                      .namedUrl ??
+                                  'https://${projectNameSubdomain('${model.name}-server')}.$baseDomain',
+                              subdomainStatus:
+                                  ref
+                                      .read(aiServerProvider.notifier)
+                                      .namedUrlStatus,
+                              onCopyId: () => _copyServiceId(apiUrl),
+                              onOpenUrl: () async {
+                                final uri = Uri.parse('https://$liveUrl');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                } else {
+                                  Clipboard.setData(
+                                    ClipboardData(text: 'https://$liveUrl'),
+                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'URL copied (could not open browser)',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 48),
+                            _SecuritySection(
+                              requireApiKey: state.security.requireApiKey,
+                              apiKey: state.security.apiKey,
+                              onToggleRequire: (val) {
+                                ref
+                                    .read(aiServerProvider.notifier)
+                                    .setRequireApiKey(val);
+                              },
+                              onRegenerate: () {
+                                ref
+                                    .read(aiServerProvider.notifier)
+                                    .regenerateApiKey();
+                              },
+                              onCopyKey: () {
+                                Clipboard.setData(
+                                  ClipboardData(text: state.security.apiKey),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'API Key copied to clipboard',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 48),
+                            _HealthThresholdsSection(
+                              idleTimeoutMinutes:
+                                  state.security.idleTimeoutMinutes,
+                              batteryStopPercent:
+                                  state.security.batteryStopPercent,
+                              thermalStop: state.security.thermalStop,
+                              onIdleChanged:
+                                  (v) => ref
+                                      .read(aiServerProvider.notifier)
+                                      .setIdleTimeoutMinutes(v.round()),
+                              onBatteryChanged:
+                                  (v) => ref
+                                      .read(aiServerProvider.notifier)
+                                      .setBatteryStopPercent(v.round()),
+                              onThermalChanged:
+                                  (v) => ref
+                                      .read(aiServerProvider.notifier)
+                                      .setThermalStop(v),
+                            ),
+                            const SizedBox(height: 48),
+                            _RuntimeControlsSection(
+                              lowPowerMode: state.lowPowerMode,
+                              tokenLimit: state.tokenLimit,
+                              temperature: state.temperature,
+                              onLowPowerChanged:
+                                  (v) => ref
+                                      .read(aiServerProvider.notifier)
+                                      .setLowPowerMode(v),
+                              onTokenLimitChanged:
+                                  (v) => ref
+                                      .read(aiServerProvider.notifier)
+                                      .setTokenLimit(v),
+                              onTemperatureChanged:
+                                  (v) => ref
+                                      .read(aiServerProvider.notifier)
+                                      .setTemperature(v),
+                            ),
+                            const SizedBox(height: 48),
+                            _NetworkEndpointsSection(
+                              port: state.port,
+                              tailscaleIp: state.device.tailscaleIp,
+                              tunnel: state.tunnel,
+                              isRunning: state.status == ServerStatus.running,
+                              onStartTunnel: () async {
+                                final ok =
+                                    await ref
+                                        .read(aiServerProvider.notifier)
+                                        .startTunnel();
+                                if (!ok && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Start the AI server before enabling Cloudflare tunnel',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              onStopTunnel: () {
+                                ref
+                                    .read(aiServerProvider.notifier)
+                                    .stopTunnel();
+                              },
+                              onCopyApiUrl: () {
+                                Clipboard.setData(
+                                  ClipboardData(
+                                    text: 'http://127.0.0.1:${state.port}/v1',
+                                  ),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Local API URL copied to clipboard',
+                                    ),
+                                  ),
+                                );
+                              },
+                              onCopyTailscaleUrl: () {
+                                final ip = state.device.tailscaleIp;
+                                if (ip != null) {
+                                  Clipboard.setData(
+                                    ClipboardData(
+                                      text: 'http://$ip:${state.port}',
+                                    ),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Tailscale URL copied to clipboard',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              onCopyTunnelUrl: () {
+                                final url = state.tunnel.publicUrl;
+                                if (url != null) {
+                                  Clipboard.setData(ClipboardData(text: url));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Cloudflare Tunnel URL copied to clipboard',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 48),
+                            _SystemStatusSection(
+                              deviceLabel:
+                                  device.cpuLabel.isNotEmpty
+                                      ? device.cpuLabel
+                                      : 'IQOO 9se',
+                              batteryPercent: device.batteryPercent,
+                              charging: device.batteryCharging,
+                              cpuPct: cpuPct,
+                              ramLabel:
+                                  '${ramUsed.toStringAsFixed(1)}GB / ${device.ramGb}GB',
+                              ramPct: ramPct,
+                              storageLabel:
+                                  '${device.freeStorageGb.toStringAsFixed(1)}GB free',
+                              storagePct: storagePct,
+                            ),
+                            const SizedBox(height: 48),
+                            _ActiveRuntimeSection(
+                              modelName: model.name,
+                              status: state.status,
+                              port: state.port,
+                            ),
+                            const SizedBox(height: 48),
+                            _RuntimeLogsSection(
+                              logs: logs,
+                              logSearchController: _logSearchController,
+                              logScrollController: _logScrollController,
+                              terminalHeight: terminalHeight,
+                              timeRange: _timeRange,
+                              showCustomRange: _showCustomRange,
+                              logsFullscreen: _logsFullscreen,
+                              onSearchChanged: () => setState(() {}),
+                              onToggleFullscreen:
+                                  () => setState(
+                                    () => _logsFullscreen = !_logsFullscreen,
+                                  ),
+                              onScrollToBottom: _scrollLogsToBottom,
+                              onTimeRangeTap: () {
+                                setState(() {
+                                  _showCustomRange = !_showCustomRange;
+                                  if (!_showCustomRange)
+                                    _timeRange = 'last hour';
+                                });
+                              },
+                              onApplyCustomRange: () {
+                                setState(() {
+                                  _showCustomRange = false;
+                                  _timeRange = 'custom range';
+                                });
+                              },
+                              onCancelCustomRange:
+                                  () =>
+                                      setState(() => _showCustomRange = false),
+                            ),
+                          ],
                         ),
-                        children: [
-                      _DetailIntro(
-                        modelName: model.name,
-                        status: state.status,
-                        onManualDeploy: _manualDeploy,
-                      ),
-                      const SizedBox(height: 32),
-                      _MetadataGrid(
-                        serviceId: serviceId,
-                        repo: repoLabel,
-                        liveUrl: liveUrl,
-                        onCopyId: () => _copyServiceId(apiUrl),
-                        onOpenUrl: () async {
-                          final uri = Uri.parse('https://$liveUrl');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          } else {
-                            Clipboard.setData(ClipboardData(text: 'https://$liveUrl'));
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('URL copied (could not open browser)')),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 48),
-                      _SecuritySection(
-                        requireApiKey: state.security.requireApiKey,
-                        apiKey: state.security.apiKey,
-                        onToggleRequire: (val) {
-                          ref.read(aiServerProvider.notifier).setRequireApiKey(val);
-                        },
-                        onRegenerate: () {
-                          ref.read(aiServerProvider.notifier).regenerateApiKey();
-                        },
-                        onCopyKey: () {
-                          Clipboard.setData(ClipboardData(text: state.security.apiKey));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('API Key copied to clipboard')),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 48),
-                      _HealthThresholdsSection(
-                        idleTimeoutMinutes: state.security.idleTimeoutMinutes,
-                        batteryStopPercent: state.security.batteryStopPercent,
-                        thermalStop: state.security.thermalStop,
-                        onIdleChanged: (v) => ref.read(aiServerProvider.notifier).setIdleTimeoutMinutes(v.round()),
-                        onBatteryChanged: (v) => ref.read(aiServerProvider.notifier).setBatteryStopPercent(v.round()),
-                        onThermalChanged: (v) => ref.read(aiServerProvider.notifier).setThermalStop(v),
-                      ),
-                      const SizedBox(height: 48),
-                      _RuntimeControlsSection(
-                        lowPowerMode: state.lowPowerMode,
-                        tokenLimit: state.tokenLimit,
-                        temperature: state.temperature,
-                        onLowPowerChanged: (v) => ref.read(aiServerProvider.notifier).setLowPowerMode(v),
-                        onTokenLimitChanged: (v) => ref.read(aiServerProvider.notifier).setTokenLimit(v),
-                        onTemperatureChanged: (v) => ref.read(aiServerProvider.notifier).setTemperature(v),
-                      ),
-                      const SizedBox(height: 48),
-                      _NetworkEndpointsSection(
-                        port: state.port,
-                        tailscaleIp: state.device.tailscaleIp,
-                        tunnel: state.tunnel,
-                        isRunning: state.status == ServerStatus.running,
-                        onStartTunnel: () async {
-                          final ok = await ref.read(aiServerProvider.notifier).startTunnel();
-                          if (!ok && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Start the AI server before enabling Cloudflare tunnel'),
-                              ),
-                            );
-                          }
-                        },
-                        onStopTunnel: () {
-                          ref.read(aiServerProvider.notifier).stopTunnel();
-                        },
-                        onCopyApiUrl: () {
-                          Clipboard.setData(ClipboardData(text: 'http://127.0.0.1:${state.port}/v1'));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Local API URL copied to clipboard')),
-                          );
-                        },
-                        onCopyTailscaleUrl: () {
-                          final ip = state.device.tailscaleIp;
-                          if (ip != null) {
-                            Clipboard.setData(ClipboardData(text: 'http://$ip:${state.port}'));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Tailscale URL copied to clipboard')),
-                            );
-                          }
-                        },
-                        onCopyTunnelUrl: () {
-                          final url = state.tunnel.publicUrl;
-                          if (url != null) {
-                            Clipboard.setData(ClipboardData(text: url));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Cloudflare Tunnel URL copied to clipboard')),
-                            );
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 48),
-                      _SystemStatusSection(
-                        deviceLabel: device.cpuLabel.isNotEmpty
-                            ? device.cpuLabel
-                            : 'IQOO 9se',
-                        batteryPercent: device.batteryPercent,
-                        charging: device.batteryCharging,
-                        cpuPct: cpuPct,
-                        ramLabel:
-                            '${ramUsed.toStringAsFixed(1)}GB / ${device.ramGb}GB',
-                        ramPct: ramPct,
-                        storageLabel:
-                            '${storageUsed.round()}GB / ${storageTotal.round()}GB',
-                        storagePct: storagePct,
-                      ),
-                      const SizedBox(height: 48),
-                      _ActiveRuntimeSection(
-                        modelName: model.name,
-                        status: state.status,
-                        port: state.port,
-                      ),
-                      const SizedBox(height: 48),
-                      _RuntimeLogsSection(
-                        logs: logs,
-                        logSearchController: _logSearchController,
-                        logScrollController: _logScrollController,
-                        terminalHeight: terminalHeight,
-                        timeRange: _timeRange,
-                        showCustomRange: _showCustomRange,
-                        logsFullscreen: _logsFullscreen,
-                        onSearchChanged: () => setState(() {}),
-                        onToggleFullscreen: () =>
-                            setState(() => _logsFullscreen = !_logsFullscreen),
-                        onScrollToBottom: _scrollLogsToBottom,
-                        onTimeRangeTap: () {
-                          setState(() {
-                            _showCustomRange = !_showCustomRange;
-                            if (!_showCustomRange) _timeRange = 'last hour';
-                          });
-                        },
-                        onApplyCustomRange: () {
-                          setState(() {
-                            _showCustomRange = false;
-                            _timeRange = 'custom range';
-                          });
-                        },
-                        onCancelCustomRange: () =>
-                            setState(() => _showCustomRange = false),
-                      ),
-                        ],
                       ),
                     ),
-                  ),
                   ],
                 ),
               ),
@@ -476,7 +580,9 @@ class _DetailTopBar extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       decoration: BoxDecoration(
         color: _DetailPalette.background.withValues(alpha: 0.8),
-        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+        ),
       ),
       child: Row(
         children: [
@@ -492,7 +598,11 @@ class _DetailTopBar extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.arrow_back, size: 20, color: _DetailPalette.onSurface),
+                Icon(
+                  Icons.arrow_back,
+                  size: 20,
+                  color: _DetailPalette.onSurface,
+                ),
                 Text(
                   'back',
                   style: GoogleFonts.spaceMono(
@@ -506,7 +616,11 @@ class _DetailTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Icon(Icons.architecture, color: _DetailPalette.primary, size: 28),
+          const Icon(
+            Icons.architecture,
+            color: _DetailPalette.primary,
+            size: 28,
+          ),
           const SizedBox(width: 8),
           Text(
             'buildify',
@@ -520,17 +634,29 @@ class _DetailTopBar extends StatelessWidget {
           const Spacer(),
           IconButton(
             tooltip: 'Model Store',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const ModelStoreScreen()),
+            onPressed:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ModelStoreScreen(),
+                  ),
+                ),
+            icon: const Icon(
+              Icons.storefront_outlined,
+              color: _DetailPalette.onSurface,
             ),
-            icon: const Icon(Icons.storefront_outlined, color: _DetailPalette.onSurface),
           ),
           IconButton(
             tooltip: 'Self-Test Diagnostics',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SelfTestScreen()),
+            onPressed:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SelfTestScreen(),
+                  ),
+                ),
+            icon: const Icon(
+              Icons.biotech_outlined,
+              color: _DetailPalette.onSurface,
             ),
-            icon: const Icon(Icons.biotech_outlined, color: _DetailPalette.onSurface),
           ),
         ],
       ),
@@ -575,10 +701,22 @@ class _Breadcrumbs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.folder_open_outlined, size: 14, color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6)),
-        Icon(Icons.chevron_right, size: 12, color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6)),
+        Icon(
+          Icons.folder_open_outlined,
+          size: 14,
+          color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
+        Icon(
+          Icons.chevron_right,
+          size: 12,
+          color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
         Text(modelName.toLowerCase(), style: _crumbStyle()),
-        Icon(Icons.chevron_right, size: 12, color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6)),
+        Icon(
+          Icons.chevron_right,
+          size: 12,
+          color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
         Text('local-server', style: _crumbStyle(active: true)),
       ],
     );
@@ -589,9 +727,10 @@ class _Breadcrumbs extends StatelessWidget {
       fontSize: 10,
       fontWeight: FontWeight.w700,
       letterSpacing: 1,
-      color: active
-          ? _DetailPalette.onSurface
-          : _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6),
+      color:
+          active
+              ? _DetailPalette.onSurface
+              : _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6),
     );
   }
 }
@@ -620,7 +759,11 @@ class _ServiceHeader extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.language, size: 16, color: _DetailPalette.primary),
+                const Icon(
+                  Icons.language,
+                  size: 16,
+                  color: _DetailPalette.primary,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'ai inference service',
@@ -648,18 +791,21 @@ class _ServiceHeader extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                _TagChip('llama.cpp'),
-                _TagChip('on-device edge'),
-              ],
+              children: [_TagChip('llama.cpp'), _TagChip('on-device edge')],
             ),
           ],
         );
         final actions = _PrimaryButton(
-          label: isRunning ? 'STOP AI SERVER' : (isStarting ? 'STARTING...' : 'START AI SERVER'),
+          label:
+              isRunning
+                  ? 'STOP AI SERVER'
+                  : (isStarting ? 'STARTING...' : 'START AI SERVER'),
           icon: isRunning ? Icons.stop : Icons.play_arrow,
           onTap: isStarting ? null : onManualDeploy,
-          backgroundColor: isRunning ? _DetailPalette.statusSuspended : _DetailPalette.primary,
+          backgroundColor:
+              isRunning
+                  ? _DetailPalette.statusSuspended
+                  : _DetailPalette.primary,
           foregroundColor: isRunning ? Colors.white : _DetailPalette.onPrimary,
         );
         if (stacked) {
@@ -811,6 +957,8 @@ class _MetadataGrid extends StatelessWidget {
     required this.liveUrl,
     required this.onCopyId,
     required this.onOpenUrl,
+    required this.subdomain,
+    required this.subdomainStatus,
   });
 
   final String serviceId;
@@ -818,6 +966,8 @@ class _MetadataGrid extends StatelessWidget {
   final String liveUrl;
   final VoidCallback onCopyId;
   final VoidCallback onOpenUrl;
+  final String subdomain;
+  final String subdomainStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -838,7 +988,10 @@ class _MetadataGrid extends StatelessWidget {
                     child: Text(
                       serviceId,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.spaceMono(fontSize: 14, color: _DetailPalette.onSurface),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        color: _DetailPalette.onSurface,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -853,12 +1006,19 @@ class _MetadataGrid extends StatelessWidget {
               label: 'repository',
               child: Row(
                 children: [
-                  const Icon(Icons.code, size: 16, color: _DetailPalette.onSurfaceVariant),
+                  const Icon(
+                    Icons.code,
+                    size: 16,
+                    color: _DetailPalette.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       repo,
-                      style: GoogleFonts.spaceMono(fontSize: 14, color: _DetailPalette.onSurface),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        color: _DetailPalette.onSurface,
+                      ),
                     ),
                   ),
                   Container(
@@ -868,7 +1028,10 @@ class _MetadataGrid extends StatelessWidget {
                     ),
                     child: Text(
                       'main',
-                      style: GoogleFonts.spaceMono(fontSize: 8, letterSpacing: 0.8),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 8,
+                        letterSpacing: 0.8,
+                      ),
                     ),
                   ),
                 ],
@@ -876,24 +1039,68 @@ class _MetadataGrid extends StatelessWidget {
             ),
             _MetaCell(
               label: 'live url',
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      liveUrl,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 14,
-                        color: _DetailPalette.primary,
-                        decoration: TextDecoration.underline,
-                        decorationColor: _DetailPalette.primary.withValues(alpha: 0.3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          liveUrl,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 14,
+                            color: _DetailPalette.primary,
+                            decoration: TextDecoration.underline,
+                            decorationColor: _DetailPalette.primary.withValues(
+                              alpha: 0.3,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      IconButton(
+                        onPressed: onOpenUrl,
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        color: _DetailPalette.onSurfaceVariant,
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    onPressed: onOpenUrl,
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    color: _DetailPalette.onSurfaceVariant,
+                  const SizedBox(height: 12),
+                  Text(
+                    'project subdomain · $subdomainStatus',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SelectableText(
+                          subdomain,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _DetailPalette.primary,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Copy subdomain',
+                        icon: const Icon(Icons.content_copy, size: 16),
+                        onPressed:
+                            () => Clipboard.setData(
+                              ClipboardData(text: subdomain),
+                            ),
+                      ),
+                      IconButton(
+                        tooltip: 'Open subdomain',
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        onPressed:
+                            subdomainStatus == 'Live'
+                                ? () => launchUrl(
+                                  Uri.parse(subdomain),
+                                  mode: LaunchMode.externalApplication,
+                                )
+                                : null,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -903,7 +1110,8 @@ class _MetadataGrid extends StatelessWidget {
             return Column(
               children: [
                 for (var i = 0; i < cells.length; i++) ...[
-                  if (i > 0) Divider(height: 1, color: _DetailPalette.outlineVariant),
+                  if (i > 0)
+                    Divider(height: 1, color: _DetailPalette.outlineVariant),
                   cells[i],
                 ],
               ],
@@ -991,7 +1199,9 @@ class _SecuritySection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _DetailPalette.surfaceContainerLow.withValues(alpha: 0.5),
+                  color: _DetailPalette.surfaceContainerLow.withValues(
+                    alpha: 0.5,
+                  ),
                   border: const Border(
                     bottom: BorderSide(color: _DetailPalette.outlineVariant),
                   ),
@@ -1021,9 +1231,10 @@ class _SecuritySection extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
-                        color: requireApiKey
-                            ? _DetailPalette.primary
-                            : _DetailPalette.statusSuspended,
+                        color:
+                            requireApiKey
+                                ? _DetailPalette.primary
+                                : _DetailPalette.statusSuspended,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1057,7 +1268,9 @@ class _SecuritySection extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: _DetailPalette.surfaceContainerLowest,
-                          border: Border.all(color: _DetailPalette.outlineVariant),
+                          border: Border.all(
+                            color: _DetailPalette.outlineVariant,
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -1124,7 +1337,10 @@ class _DetailSliderRow extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.spaceMono(fontSize: 12, color: _DetailPalette.onSurface),
+              style: GoogleFonts.spaceMono(
+                fontSize: 12,
+                color: _DetailPalette.onSurface,
+              ),
             ),
             const Spacer(),
             Text(
@@ -1186,24 +1402,37 @@ class _HealthThresholdsSection extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: _DetailPalette.background,
-            border: Border.all(color: _DetailPalette.outlineVariant.withValues(alpha: 0.5)),
+            border: Border.all(
+              color: _DetailPalette.outlineVariant.withValues(alpha: 0.5),
+            ),
           ),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _DetailPalette.surfaceContainerLow.withValues(alpha: 0.5),
-                  border: const Border(bottom: BorderSide(color: _DetailPalette.outlineVariant)),
+                  color: _DetailPalette.surfaceContainerLow.withValues(
+                    alpha: 0.5,
+                  ),
+                  border: const Border(
+                    bottom: BorderSide(color: _DetailPalette.outlineVariant),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.thermostat_outlined, size: 16, color: _DetailPalette.onSurfaceVariant),
+                    const Icon(
+                      Icons.thermostat_outlined,
+                      size: 16,
+                      color: _DetailPalette.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'stop on thermal warning',
-                        style: GoogleFonts.spaceMono(fontSize: 14, color: _DetailPalette.onSurface),
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 14,
+                          color: _DetailPalette.onSurface,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1214,7 +1443,10 @@ class _HealthThresholdsSection extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
-                        color: thermalStop ? _DetailPalette.primary : _DetailPalette.statusSuspended,
+                        color:
+                            thermalStop
+                                ? _DetailPalette.primary
+                                : _DetailPalette.statusSuspended,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1233,7 +1465,10 @@ class _HealthThresholdsSection extends StatelessWidget {
                   children: [
                     _DetailSliderRow(
                       label: 'idle timeout',
-                      valueLabel: idleTimeoutMinutes == 0 ? 'Off' : '$idleTimeoutMinutes min',
+                      valueLabel:
+                          idleTimeoutMinutes == 0
+                              ? 'Off'
+                              : '$idleTimeoutMinutes min',
                       value: idleTimeoutMinutes.toDouble(),
                       min: 0,
                       max: 60,
@@ -1243,7 +1478,10 @@ class _HealthThresholdsSection extends StatelessWidget {
                     const SizedBox(height: 16),
                     _DetailSliderRow(
                       label: 'stop below battery',
-                      valueLabel: batteryStopPercent == 0 ? 'Off' : '$batteryStopPercent%',
+                      valueLabel:
+                          batteryStopPercent == 0
+                              ? 'Off'
+                              : '$batteryStopPercent%',
                       value: batteryStopPercent.toDouble(),
                       min: 0,
                       max: 50,
@@ -1288,24 +1526,37 @@ class _RuntimeControlsSection extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: _DetailPalette.background,
-            border: Border.all(color: _DetailPalette.outlineVariant.withValues(alpha: 0.5)),
+            border: Border.all(
+              color: _DetailPalette.outlineVariant.withValues(alpha: 0.5),
+            ),
           ),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _DetailPalette.surfaceContainerLow.withValues(alpha: 0.5),
-                  border: const Border(bottom: BorderSide(color: _DetailPalette.outlineVariant)),
+                  color: _DetailPalette.surfaceContainerLow.withValues(
+                    alpha: 0.5,
+                  ),
+                  border: const Border(
+                    bottom: BorderSide(color: _DetailPalette.outlineVariant),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.battery_saver_outlined, size: 16, color: _DetailPalette.onSurfaceVariant),
+                    const Icon(
+                      Icons.battery_saver_outlined,
+                      size: 16,
+                      color: _DetailPalette.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'low-power mode',
-                        style: GoogleFonts.spaceMono(fontSize: 14, color: _DetailPalette.onSurface),
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 14,
+                          color: _DetailPalette.onSurface,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1316,7 +1567,10 @@ class _RuntimeControlsSection extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
-                        color: lowPowerMode ? _DetailPalette.primary : _DetailPalette.statusSuspended,
+                        color:
+                            lowPowerMode
+                                ? _DetailPalette.primary
+                                : _DetailPalette.statusSuspended,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1403,24 +1657,37 @@ class _NetworkEndpointsSection extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: _DetailPalette.background,
-            border: Border.all(color: _DetailPalette.outlineVariant.withValues(alpha: 0.5)),
+            border: Border.all(
+              color: _DetailPalette.outlineVariant.withValues(alpha: 0.5),
+            ),
           ),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _DetailPalette.surfaceContainerLow.withValues(alpha: 0.5),
-                  border: const Border(bottom: BorderSide(color: _DetailPalette.outlineVariant)),
+                  color: _DetailPalette.surfaceContainerLow.withValues(
+                    alpha: 0.5,
+                  ),
+                  border: const Border(
+                    bottom: BorderSide(color: _DetailPalette.outlineVariant),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.router_outlined, size: 16, color: _DetailPalette.onSurfaceVariant),
+                    const Icon(
+                      Icons.router_outlined,
+                      size: 16,
+                      color: _DetailPalette.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'server status: ${isRunning ? 'online' : 'offline'}',
-                        style: GoogleFonts.spaceMono(fontSize: 14, color: _DetailPalette.onSurface),
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 14,
+                          color: _DetailPalette.onSurface,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1451,12 +1718,18 @@ class _NetworkEndpointsSection extends StatelessWidget {
                             children: [
                               Text(
                                 'local api endpoint (same device)',
-                                style: GoogleFonts.spaceMono(fontSize: 10, color: _DetailPalette.onSurfaceVariant),
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 10,
+                                  color: _DetailPalette.onSurfaceVariant,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 'http://127.0.0.1:$port/v1',
-                                style: GoogleFonts.spaceMono(fontSize: 13, color: _DetailPalette.primary),
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 13,
+                                  color: _DetailPalette.primary,
+                                ),
                               ),
                             ],
                           ),
@@ -1470,7 +1743,12 @@ class _NetworkEndpointsSection extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Divider(height: 1, color: _DetailPalette.outlineVariant.withValues(alpha: 0.5)),
+                    Divider(
+                      height: 1,
+                      color: _DetailPalette.outlineVariant.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     // 2. Tailscale VPN Endpoint
                     Row(
@@ -1484,30 +1762,46 @@ class _NetworkEndpointsSection extends StatelessWidget {
                                   Expanded(
                                     child: Text(
                                       'tailscale vpn endpoint (private mesh lan)',
-                                      style: GoogleFonts.spaceMono(fontSize: 10, color: _DetailPalette.onSurfaceVariant),
+                                      style: GoogleFonts.spaceMono(
+                                        fontSize: 10,
+                                        color: _DetailPalette.onSurfaceVariant,
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   Icon(
-                                    hasTs ? Icons.check_circle : Icons.offline_bolt_outlined,
+                                    hasTs
+                                        ? Icons.check_circle
+                                        : Icons.offline_bolt_outlined,
                                     size: 12,
-                                    color: hasTs ? _DetailPalette.primary : _DetailPalette.onSurfaceVariant,
+                                    color:
+                                        hasTs
+                                            ? _DetailPalette.primary
+                                            : _DetailPalette.onSurfaceVariant,
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                hasTs ? 'http://$tsIp:$port' : 'tailscale not detected / offline',
+                                hasTs
+                                    ? 'http://$tsIp:$port'
+                                    : 'tailscale not detected / offline',
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 13,
-                                  color: hasTs ? _DetailPalette.primary : _DetailPalette.onSurfaceVariant,
+                                  color:
+                                      hasTs
+                                          ? _DetailPalette.primary
+                                          : _DetailPalette.onSurfaceVariant,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Access from your laptop/PC anywhere without exposing to public internet.',
-                                style: GoogleFonts.spaceMono(fontSize: 9, color: _DetailPalette.onSurfaceVariant),
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 9,
+                                  color: _DetailPalette.onSurfaceVariant,
+                                ),
                               ),
                             ],
                           ),
@@ -1521,7 +1815,12 @@ class _NetworkEndpointsSection extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Divider(height: 1, color: _DetailPalette.outlineVariant.withValues(alpha: 0.5)),
+                    Divider(
+                      height: 1,
+                      color: _DetailPalette.outlineVariant.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     // 3. Cloudflare Quick Tunnel
                     Row(
@@ -1535,31 +1834,49 @@ class _NetworkEndpointsSection extends StatelessWidget {
                                   Expanded(
                                     child: Text(
                                       'cloudflare quick tunnel (public https url)',
-                                      style: GoogleFonts.spaceMono(fontSize: 10, color: _DetailPalette.onSurfaceVariant),
+                                      style: GoogleFonts.spaceMono(
+                                        fontSize: 10,
+                                        color: _DetailPalette.onSurfaceVariant,
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   Icon(
-                                    isTunnelRunning ? Icons.cloud_done : Icons.cloud_off_outlined,
+                                    isTunnelRunning
+                                        ? Icons.cloud_done
+                                        : Icons.cloud_off_outlined,
                                     size: 12,
-                                    color: isTunnelRunning ? _DetailPalette.primary : _DetailPalette.onSurfaceVariant,
+                                    color:
+                                        isTunnelRunning
+                                            ? _DetailPalette.primary
+                                            : _DetailPalette.onSurfaceVariant,
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                hasTunnel ? pubUrl : (isTunnelStarting ? 'starting tunnel...' : 'tunnel offline (no public url)'),
+                                hasTunnel
+                                    ? pubUrl
+                                    : (isTunnelStarting
+                                        ? 'starting tunnel...'
+                                        : 'tunnel offline (no public url)'),
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 13,
-                                  color: hasTunnel ? _DetailPalette.primary : _DetailPalette.onSurfaceVariant,
+                                  color:
+                                      hasTunnel
+                                          ? _DetailPalette.primary
+                                          : _DetailPalette.onSurfaceVariant,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Free public HTTPS URL via trycloudflare.com. Anyone on the internet can access.',
-                                style: GoogleFonts.spaceMono(fontSize: 9, color: _DetailPalette.onSurfaceVariant),
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 9,
+                                  color: _DetailPalette.onSurfaceVariant,
+                                ),
                               ),
                             ],
                           ),
@@ -1578,16 +1895,41 @@ class _NetworkEndpointsSection extends StatelessWidget {
                         Expanded(
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: isTunnelRunning ? _DetailPalette.statusSuspended : _DetailPalette.primary,
-                              foregroundColor: isTunnelRunning ? Colors.white : _DetailPalette.onPrimary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              backgroundColor:
+                                  isTunnelRunning
+                                      ? _DetailPalette.statusSuspended
+                                      : _DetailPalette.primary,
+                              foregroundColor:
+                                  isTunnelRunning
+                                      ? Colors.white
+                                      : _DetailPalette.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
-                            onPressed: isTunnelStarting ? null : (isTunnelRunning ? onStopTunnel : onStartTunnel),
-                            icon: Icon(isTunnelRunning ? Icons.stop_circle_outlined : Icons.cloud_upload_outlined, size: 16),
+                            onPressed:
+                                isTunnelStarting
+                                    ? null
+                                    : (isTunnelRunning
+                                        ? onStopTunnel
+                                        : onStartTunnel),
+                            icon: Icon(
+                              isTunnelRunning
+                                  ? Icons.stop_circle_outlined
+                                  : Icons.cloud_upload_outlined,
+                              size: 16,
+                            ),
                             label: Text(
-                              isTunnelStarting ? 'STARTING TUNNEL...' : (isTunnelRunning ? 'STOP CLOUDFLARE TUNNEL' : 'START CLOUDFLARE TUNNEL'),
-                              style: GoogleFonts.spaceMono(fontSize: 11, fontWeight: FontWeight.w700),
+                              isTunnelStarting
+                                  ? 'STARTING TUNNEL...'
+                                  : (isTunnelRunning
+                                      ? 'STOP CLOUDFLARE TUNNEL'
+                                      : 'START CLOUDFLARE TUNNEL'),
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
@@ -1635,26 +1977,43 @@ class _SystemStatusSection extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: _DetailPalette.background,
-            border: Border.all(color: _DetailPalette.outlineVariant.withValues(alpha: 0.5)),
+            border: Border.all(
+              color: _DetailPalette.outlineVariant.withValues(alpha: 0.5),
+            ),
           ),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _DetailPalette.surfaceContainerLow.withValues(alpha: 0.5),
-                  border: const Border(bottom: BorderSide(color: _DetailPalette.outlineVariant)),
+                  color: _DetailPalette.surfaceContainerLow.withValues(
+                    alpha: 0.5,
+                  ),
+                  border: const Border(
+                    bottom: BorderSide(color: _DetailPalette.outlineVariant),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.dns_outlined, size: 16, color: _DetailPalette.onSurfaceVariant),
+                    const Icon(
+                      Icons.dns_outlined,
+                      size: 16,
+                      color: _DetailPalette.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       deviceLabel.toLowerCase(),
-                      style: GoogleFonts.spaceMono(fontSize: 14, color: _DetailPalette.onSurface),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        color: _DetailPalette.onSurface,
+                      ),
                     ),
                     const Spacer(),
-                    Icon(Icons.bolt, size: 14, color: _DetailPalette.successGreen),
+                    Icon(
+                      Icons.bolt,
+                      size: 14,
+                      color: _DetailPalette.successGreen,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '$batteryPercent% ${charging ? 'charging' : ''}'.trim(),
@@ -1673,9 +2032,21 @@ class _SystemStatusSection extends StatelessWidget {
                   builder: (context, constraints) {
                     final stacked = constraints.maxWidth < 600;
                     final bars = [
-                      _ProgressMetric(label: 'cpu usage', value: '$cpuPct%', pct: cpuPct),
-                      _ProgressMetric(label: 'ram consumption', value: ramLabel, pct: ramPct),
-                      _ProgressMetric(label: 'storage', value: storageLabel, pct: storagePct),
+                      _ProgressMetric(
+                        label: 'cpu usage',
+                        value: '$cpuPct%',
+                        pct: cpuPct,
+                      ),
+                      _ProgressMetric(
+                        label: 'ram consumption',
+                        value: ramLabel,
+                        pct: ramPct,
+                      ),
+                      _ProgressMetric(
+                        label: 'storage',
+                        value: storageLabel,
+                        pct: storagePct,
+                      ),
                     ];
                     if (stacked) {
                       return Column(
@@ -1774,8 +2145,18 @@ class _ActiveRuntimeSection extends StatelessWidget {
     final isStarting = status == ServerStatus.starting;
     final isStopping = status == ServerStatus.stopping;
 
-    final statusLabel = isRunning ? 'online' : (isStarting ? 'starting' : (isStopping ? 'stopping' : 'offline'));
-    final statusColor = isRunning ? _DetailPalette.successGreen : (isStarting ? Colors.amber : (isStopping ? _DetailPalette.statusSuspended : _DetailPalette.onSurfaceVariant));
+    final statusLabel =
+        isRunning
+            ? 'online'
+            : (isStarting ? 'starting' : (isStopping ? 'stopping' : 'offline'));
+    final statusColor =
+        isRunning
+            ? _DetailPalette.successGreen
+            : (isStarting
+                ? Colors.amber
+                : (isStopping
+                    ? _DetailPalette.statusSuspended
+                    : _DetailPalette.onSurfaceVariant));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1794,7 +2175,9 @@ class _ActiveRuntimeSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: _DetailPalette.outlineVariant)),
+                  border: Border(
+                    bottom: BorderSide(color: _DetailPalette.outlineVariant),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -1814,7 +2197,10 @@ class _ActiveRuntimeSection extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       color: statusColor.withValues(alpha: 0.2),
                       child: Text(
                         isRunning ? 'LIVE' : 'STOPPED',
@@ -1834,9 +2220,14 @@ class _ActiveRuntimeSection extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: _DetailPalette.outlineVariant),
+                        border: Border.all(
+                          color: _DetailPalette.outlineVariant,
+                        ),
                       ),
                       child: Text(
                         'PORT $port',
@@ -1910,7 +2301,9 @@ class _RuntimeLogsSection extends StatelessWidget {
               tooltip: 'Copy logs',
               onPressed: () {
                 if (logs.isEmpty) return;
-                final text = logs.map((l) => '${l.time} ${l.instance} ${l.message}').join('\n');
+                final text = logs
+                    .map((l) => '${l.time} ${l.instance} ${l.message}')
+                    .join('\n');
                 Clipboard.setData(ClipboardData(text: text));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Logs copied to clipboard')),
@@ -1924,12 +2317,13 @@ class _RuntimeLogsSection extends StatelessWidget {
                 logsFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
                 size: 20,
               ),
-              style: logsFullscreen
-                  ? IconButton.styleFrom(
-                      backgroundColor: _DetailPalette.primary,
-                      foregroundColor: _DetailPalette.onPrimary,
-                    )
-                  : null,
+              style:
+                  logsFullscreen
+                      ? IconButton.styleFrom(
+                        backgroundColor: _DetailPalette.primary,
+                        foregroundColor: _DetailPalette.onPrimary,
+                      )
+                      : null,
             ),
           ],
         ),
@@ -1946,7 +2340,9 @@ class _RuntimeLogsSection extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: const BoxDecoration(
                   color: _DetailPalette.surfaceContainerLow,
-                  border: Border(bottom: BorderSide(color: _DetailPalette.outlineVariant)),
+                  border: Border(
+                    bottom: BorderSide(color: _DetailPalette.outlineVariant),
+                  ),
                 ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -1962,15 +2358,24 @@ class _RuntimeLogsSection extends StatelessWidget {
                           icon: Icons.schedule,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: _DetailPalette.primary.withValues(alpha: 0.1),
+                            color: _DetailPalette.primary.withValues(
+                              alpha: 0.1,
+                            ),
                             border: Border.all(color: _DetailPalette.primary),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.bolt, size: 14, color: _DetailPalette.primary),
+                              const Icon(
+                                Icons.bolt,
+                                size: 14,
+                                color: _DetailPalette.primary,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'live tail',
@@ -1980,7 +2385,11 @@ class _RuntimeLogsSection extends StatelessWidget {
                                   color: _DetailPalette.primary,
                                 ),
                               ),
-                              const Icon(Icons.expand_more, size: 14, color: _DetailPalette.primary),
+                              const Icon(
+                                Icons.expand_more,
+                                size: 14,
+                                color: _DetailPalette.primary,
+                              ),
                             ],
                           ),
                         ),
@@ -1989,22 +2398,34 @@ class _RuntimeLogsSection extends StatelessWidget {
                     final search = TextField(
                       controller: logSearchController,
                       onChanged: (_) => onSearchChanged(),
-                      style: GoogleFonts.spaceMono(fontSize: 14, color: _DetailPalette.onSurface),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        color: _DetailPalette.onSurface,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'search logs...',
                         hintStyle: GoogleFonts.spaceMono(
                           fontSize: 14,
-                          color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.3),
+                          color: _DetailPalette.onSurfaceVariant.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                         prefixIcon: Icon(
                           Icons.search,
                           size: 18,
-                          color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.5),
+                          color: _DetailPalette.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 12,
+                        ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: _DetailPalette.outlineVariant),
+                          borderSide: BorderSide(
+                            color: _DetailPalette.outlineVariant,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: _DetailPalette.primary),
@@ -2018,15 +2439,20 @@ class _RuntimeLogsSection extends StatelessWidget {
                       );
                     }
                     return Row(
-                      children: [filters, const SizedBox(width: 16), Expanded(child: search)],
+                      children: [
+                        filters,
+                        const SizedBox(width: 16),
+                        Expanded(child: search),
+                      ],
                     );
                   },
                 ),
               ),
-              if (showCustomRange) _CustomRangePicker(
-                onCancel: onCancelCustomRange,
-                onApply: onApplyCustomRange,
-              ),
+              if (showCustomRange)
+                _CustomRangePicker(
+                  onCancel: onCancelCustomRange,
+                  onApply: onApplyCustomRange,
+                ),
               Stack(
                 children: [
                   SizedBox(
@@ -2039,19 +2465,20 @@ class _RuntimeLogsSection extends StatelessWidget {
                         child: ListView(
                           controller: logScrollController,
                           padding: const EdgeInsets.all(24),
-                        children: [
-                          Text(
-                            _todayHeader(),
-                            style: GoogleFonts.spaceMono(
-                              fontSize: 14,
-                              color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.4),
+                          children: [
+                            Text(
+                              _todayHeader(),
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 14,
+                                color: _DetailPalette.onSurfaceVariant
+                                    .withValues(alpha: 0.4),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          ...logs.map((l) => _LogLineWidget(line: l)),
-                        ],
+                            const SizedBox(height: 16),
+                            ...logs.map((l) => _LogLineWidget(line: l)),
+                          ],
+                        ),
                       ),
-                    ),
                     ),
                   ),
                   Positioned(
@@ -2064,7 +2491,10 @@ class _RuntimeLogsSection extends StatelessWidget {
                         child: const SizedBox(
                           width: 40,
                           height: 40,
-                          child: Icon(Icons.arrow_downward, color: _DetailPalette.onPrimary),
+                          child: Icon(
+                            Icons.arrow_downward,
+                            color: _DetailPalette.onPrimary,
+                          ),
                         ),
                       ),
                     ),
@@ -2090,8 +2520,13 @@ class _CustomRangePicker extends StatelessWidget {
     final now = DateTime.now();
     final oneHourAgo = now.subtract(const Duration(hours: 1));
     final offsetStr = now.timeZoneOffset.isNegative ? '-' : '+';
-    final offsetHours = now.timeZoneOffset.inHours.abs().toString().padLeft(2, '0');
-    final offsetMinutes = (now.timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final offsetHours = now.timeZoneOffset.inHours.abs().toString().padLeft(
+      2,
+      '0',
+    );
+    final offsetMinutes = (now.timeZoneOffset.inMinutes.abs() % 60)
+        .toString()
+        .padLeft(2, '0');
     final tzLabel = 'GMT$offsetStr$offsetHours:$offsetMinutes';
 
     return Container(
@@ -2111,20 +2546,26 @@ class _CustomRangePicker extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              IconButton(onPressed: onCancel, icon: const Icon(Icons.close, size: 20)),
+              IconButton(
+                onPressed: onCancel,
+                icon: const Icon(Icons.close, size: 20),
+              ),
             ],
           ),
           const SizedBox(height: 24),
           _RangeField(
             label: 'START ($tzLabel)',
-            date: '${_monthName(oneHourAgo)} ${oneHourAgo.day} ${oneHourAgo.year}',
-            time: '${oneHourAgo.hour.toString().padLeft(2, '0')}:${oneHourAgo.minute.toString().padLeft(2, '0')}:${oneHourAgo.second.toString().padLeft(2, '0')}',
+            date:
+                '${_monthName(oneHourAgo)} ${oneHourAgo.day} ${oneHourAgo.year}',
+            time:
+                '${oneHourAgo.hour.toString().padLeft(2, '0')}:${oneHourAgo.minute.toString().padLeft(2, '0')}:${oneHourAgo.second.toString().padLeft(2, '0')}',
           ),
           const SizedBox(height: 16),
           _RangeField(
             label: 'END ($tzLabel)',
             date: '${_monthName(now)} ${now.day} ${now.year}',
-            time: '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}',
+            time:
+                '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}',
           ),
           const SizedBox(height: 24),
           Row(
@@ -2132,7 +2573,11 @@ class _CustomRangePicker extends StatelessWidget {
             children: [
               _OutlineButton(label: 'cancel', onTap: onCancel),
               const SizedBox(width: 12),
-              _PrimaryButton(label: 'apply custom range', icon: Icons.check, onTap: onApply),
+              _PrimaryButton(
+                label: 'apply custom range',
+                icon: Icons.check,
+                onTap: onApply,
+              ),
             ],
           ),
         ],
@@ -2141,7 +2586,20 @@ class _CustomRangePicker extends StatelessWidget {
   }
 
   String _monthName(DateTime dt) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return months[dt.month - 1];
   }
 }
@@ -2191,7 +2649,13 @@ class _RangeField extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.schedule, size: 18, color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.4)),
+                  Icon(
+                    Icons.schedule,
+                    size: 18,
+                    color: _DetailPalette.onSurfaceVariant.withValues(
+                      alpha: 0.4,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Text(time, style: GoogleFonts.spaceMono(fontSize: 14)),
                 ],
@@ -2215,7 +2679,8 @@ class _LogLineWidget extends StatelessWidget {
     if (line.highlight) messageColor = _DetailPalette.primary;
     if (line.success) messageColor = _DetailPalette.successGreen;
     if (line.warning) messageColor = _DetailPalette.statusSuspended;
-    if (line.dim) messageColor = _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6);
+    if (line.dim)
+      messageColor = _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6);
 
     Widget messageChild = Text(
       line.message,
@@ -2224,7 +2689,11 @@ class _LogLineWidget extends StatelessWidget {
     if (line.success) {
       messageChild = Row(
         children: [
-          const Icon(Icons.check_circle_outline, size: 14, color: _DetailPalette.successGreen),
+          const Icon(
+            Icons.check_circle_outline,
+            size: 14,
+            color: _DetailPalette.successGreen,
+          ),
           const SizedBox(width: 8),
           Expanded(child: messageChild),
         ],
@@ -2329,10 +2798,7 @@ class _PulseStatusIndicatorState extends State<_PulseStatusIndicator>
       return Container(
         width: 8,
         height: 8,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: widget.color,
-        ),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: widget.color),
       );
     }
 
@@ -2349,7 +2815,9 @@ class _PulseStatusIndicatorState extends State<_PulseStatusIndicator>
                 height: 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: widget.color.withValues(alpha: (1.0 - _controller.value) * 0.4),
+                  color: widget.color.withValues(
+                    alpha: (1.0 - _controller.value) * 0.4,
+                  ),
                 ),
               ),
             ),
@@ -2378,8 +2846,18 @@ class _PulseStatusIndicatorState extends State<_PulseStatusIndicator>
 String _todayHeader() {
   final now = DateTime.now();
   final months = [
-    'january', 'february', 'march', 'april', 'may', 'june',
-    'july', 'august', 'september', 'october', 'november', 'december'
+    'january',
+    'february',
+    'march',
+    'april',
+    'may',
+    'june',
+    'july',
+    'august',
+    'september',
+    'october',
+    'november',
+    'december',
   ];
   return '${months[now.month - 1]} ${now.day}, ${now.year}';
 }
