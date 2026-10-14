@@ -34,8 +34,7 @@ class HostProjectSourcePage extends ConsumerStatefulWidget {
       _HostProjectSourcePageState();
 }
 
-class _HostProjectSourcePageState
-    extends ConsumerState<HostProjectSourcePage> {
+class _HostProjectSourcePageState extends ConsumerState<HostProjectSourcePage> {
   bool _isHoveringGit = false;
   bool _extracting = false;
   final _gitRepoKey = GlobalKey();
@@ -47,6 +46,7 @@ class _HostProjectSourcePageState
     _urlController.dispose();
     super.dispose();
   }
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +92,8 @@ class _HostProjectSourcePageState
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 580),
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 children: [
                   Text(
                     'Let\'s build something new.',
@@ -133,7 +134,8 @@ class _HostProjectSourcePageState
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const GithubOAuthSimulationPage(),
+                            builder: (context) =>
+                                const GithubOAuthSimulationPage(),
                           ),
                         );
                       },
@@ -143,16 +145,21 @@ class _HostProjectSourcePageState
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         decoration: BoxDecoration(
-                          color: _isHoveringGit ? _WizardPalette.hoverCard : Colors.transparent,
+                          color: _isHoveringGit
+                              ? _WizardPalette.hoverCard
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _isHoveringGit ? Colors.white54 : _WizardPalette.outline,
+                            color: _isHoveringGit
+                                ? Colors.white54
+                                : _WizardPalette.outline,
                           ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const _GitHubLogo(size: 20, color: _WizardPalette.primary),
+                            const _GitHubLogo(
+                                size: 20, color: _WizardPalette.primary),
                             const SizedBox(width: 12),
                             Text(
                               'GitHub',
@@ -170,7 +177,8 @@ class _HostProjectSourcePageState
                   const SizedBox(height: 24),
                   Row(
                     children: [
-                      const Expanded(child: Divider(color: _WizardPalette.outline)),
+                      const Expanded(
+                          child: Divider(color: _WizardPalette.outline)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
@@ -181,7 +189,8 @@ class _HostProjectSourcePageState
                           ),
                         ),
                       ),
-                      const Expanded(child: Divider(color: _WizardPalette.outline)),
+                      const Expanded(
+                          child: Divider(color: _WizardPalette.outline)),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -192,26 +201,33 @@ class _HostProjectSourcePageState
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: _WizardPalette.outline),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: Row(
                       children: [
-                        const Icon(Icons.link, color: _WizardPalette.textDim, size: 20),
+                        const Icon(Icons.link,
+                            color: _WizardPalette.textDim, size: 20),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: _urlController,
-                            style: GoogleFonts.spaceMono(fontSize: 14, color: _WizardPalette.primary),
+                            style: GoogleFonts.spaceMono(
+                                fontSize: 14, color: _WizardPalette.primary),
                             decoration: InputDecoration(
                               hintText: 'https://github.com/owner/repo',
-                              hintStyle: GoogleFonts.spaceMono(color: _WizardPalette.textDim),
+                              hintStyle: GoogleFonts.spaceMono(
+                                  color: _WizardPalette.textDim),
                               border: InputBorder.none,
                             ),
-                            onSubmitted: (val) => _handleUrlSubmit(val, context),
+                            onSubmitted: (val) =>
+                                _handleUrlSubmit(val, context),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.arrow_forward, color: _WizardPalette.primary),
-                          onPressed: () => _handleUrlSubmit(_urlController.text, context),
+                          icon: const Icon(Icons.arrow_forward,
+                              color: _WizardPalette.primary),
+                          onPressed: () =>
+                              _handleUrlSubmit(_urlController.text, context),
                         ),
                       ],
                     ),
@@ -238,7 +254,8 @@ class _HostProjectSourcePageState
                       dashSpace: 6,
                     ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 56, horizontal: 24),
                       alignment: Alignment.center,
                       child: Column(
                         children: [
@@ -247,7 +264,8 @@ class _HostProjectSourcePageState
                             textAlign: TextAlign.center,
                             style: GoogleFonts.spaceMono(
                               fontSize: 16,
-                              color: _WizardPalette.primary.withValues(alpha: 0.8),
+                              color:
+                                  _WizardPalette.primary.withValues(alpha: 0.8),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -359,17 +377,15 @@ class _HostProjectSourcePageState
       final destPath = p.join(docsDir.path, 'projects', const Uuid().v4());
       await Directory(destPath).create(recursive: true);
 
-      final inputStream = InputFileStream(zipPath);
-      final archive = ZipDecoder().decodeStream(inputStream);
+      final archive =
+          ZipDecoder().decodeBytes(await File(zipPath).readAsBytes());
       extractArchiveToDisk(archive, destPath);
-      await inputStream.close();
 
       // If zip had a single top-level directory, use that as the project root
       final entries = Directory(destPath).listSync();
-      final localPath =
-          entries.length == 1 && entries.first is Directory
-              ? entries.first.path
-              : destPath;
+      final localPath = entries.length == 1 && entries.first is Directory
+          ? entries.first.path
+          : destPath;
 
       final zipName = result.files.single.name.replaceAll('.zip', '');
       if (!mounted) return;
@@ -481,7 +497,7 @@ class _DashedBorderPainter extends CustomPainter {
 // ==========================================
 class _GitHubLogo extends StatelessWidget {
   const _GitHubLogo({required this.size, required this.color});
-  
+
   final double size;
   final Color color;
 
@@ -600,7 +616,8 @@ class _GithubOAuthSimulationPageState extends State<GithubOAuthSimulationPage> {
                             shape: BoxShape.circle,
                             color: Color(0xFF21262D),
                           ),
-                          child: const _GitHubLogo(size: 32, color: Colors.white),
+                          child:
+                              const _GitHubLogo(size: 32, color: Colors.white),
                         ),
                       ],
                     ),
@@ -681,7 +698,8 @@ class _GithubOAuthSimulationPageState extends State<GithubOAuthSimulationPage> {
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFF0F6FC),
-                                side: const BorderSide(color: Color(0xFF30363D)),
+                                side:
+                                    const BorderSide(color: Color(0xFF30363D)),
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 14),
                               ),
@@ -847,14 +865,15 @@ class _GithubAppInstallSimulationPageState
                       const SizedBox(height: 24),
                       const Divider(color: Color(0xFF30363D)),
                       const SizedBox(height: 12),
-
                       Column(
                         key: _repoChoiceKey,
                         children: [
                           RadioListTile<bool>(
                             value: true,
-                            groupValue: _allRepos, // ignore: deprecated_member_use
-                            onChanged: (val) { // ignore: deprecated_member_use
+                            groupValue:
+                                _allRepos, // ignore: deprecated_member_use
+                            onChanged: (val) {
+                              // ignore: deprecated_member_use
                               if (val != null) setState(() => _allRepos = val);
                             },
                             title: Text(
@@ -874,8 +893,10 @@ class _GithubAppInstallSimulationPageState
                           ),
                           RadioListTile<bool>(
                             value: false,
-                            groupValue: _allRepos, // ignore: deprecated_member_use
-                            onChanged: (val) { // ignore: deprecated_member_use
+                            groupValue:
+                                _allRepos, // ignore: deprecated_member_use
+                            onChanged: (val) {
+                              // ignore: deprecated_member_use
                               if (val != null) setState(() => _allRepos = val);
                             },
                             title: Text(
@@ -895,7 +916,6 @@ class _GithubAppInstallSimulationPageState
                           ),
                         ],
                       ),
-
                       if (!_allRepos) ...[
                         const SizedBox(height: 12),
                         Container(
@@ -919,13 +939,13 @@ class _GithubAppInstallSimulationPageState
                                       fontSize: 12, color: Colors.white),
                                 ),
                                 activeColor: const Color(0xFF238636),
-                                controlAffinity: ListTileControlAffinity.leading,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
                               );
                             }).toList(),
                           ),
                         ),
                       ],
-
                       const SizedBox(height: 32),
                       ElevatedButton(
                         key: _installKey,
@@ -975,7 +995,8 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
   @override
   Widget build(BuildContext context) {
     final filteredRepos = widget.allowedRepos
-        .where((repo) => repo.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .where(
+            (repo) => repo.toLowerCase().contains(_searchQuery.toLowerCase()))
         .toList();
 
     return Theme(
@@ -1011,17 +1032,21 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
                   style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
                   decoration: InputDecoration(
                     hintText: 'Search repositories...',
-                    hintStyle: GoogleFonts.spaceMono(color: _WizardPalette.textDim),
-                    prefixIcon: const Icon(Icons.search, color: _WizardPalette.textDim),
+                    hintStyle:
+                        GoogleFonts.spaceMono(color: _WizardPalette.textDim),
+                    prefixIcon:
+                        const Icon(Icons.search, color: _WizardPalette.textDim),
                     filled: true,
                     fillColor: Colors.white.withValues(alpha: 0.05),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
+                      borderSide:
+                          const BorderSide(color: _WizardPalette.outline),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                      borderSide:
+                          const BorderSide(color: _WizardPalette.primary),
                     ),
                   ),
                 ),
@@ -1037,7 +1062,8 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
                     ),
                     child: Row(
                       children: [
-                        const _GitHubLogo(size: 24, color: _WizardPalette.primary),
+                        const _GitHubLogo(
+                            size: 24, color: _WizardPalette.primary),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
@@ -1084,7 +1110,8 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
                     child: Text(
                       'No repositories found',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(color: _WizardPalette.textDim),
+                      style:
+                          GoogleFonts.spaceMono(color: _WizardPalette.textDim),
                     ),
                   ),
               ],
@@ -1123,7 +1150,8 @@ class _HostProjectSettingsPageState
   final _buildCommandController = TextEditingController();
   final _publishDirController = TextEditingController();
 
-  final List<MapEntry<TextEditingController, TextEditingController>> _envVars = [];
+  final List<MapEntry<TextEditingController, TextEditingController>> _envVars =
+      [];
 
   final _nameKey = GlobalKey();
   final _branchKey = GlobalKey();
@@ -1209,486 +1237,513 @@ class _HostProjectSettingsPageState
       ),
       child: GuidedTourOverlay(
         child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'build - ${widget.repoName}',
-            style: GoogleFonts.spaceMono(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: _WizardPalette.primary,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              'build - ${widget.repoName}',
+              style: GoogleFonts.spaceMono(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _WizardPalette.primary,
+              ),
             ),
           ),
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 580),
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              children: [
-                // Source info card for local deployments
-                if (widget.existingLocalPath != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 580),
+              child: ListView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                children: [
+                  // Source info card for local deployments
+                  if (widget.existingLocalPath != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.folder_open,
+                              color: Color(0xFF10B981), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.existingLocalPath!,
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 11,
+                                color: const Color(0xFF10B981),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.folder_open,
-                            color: Color(0xFF10B981), size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            widget.existingLocalPath!,
-                            style: GoogleFonts.spaceMono(
-                              fontSize: 11,
-                              color: const Color(0xFF10B981),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
 
-                // Project Name Input
-                Text(
-                  'Project name',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _WizardPalette.primary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  key: _nameKey,
-                  controller: _nameController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                  // Project Name Input
+                  Text(
+                    'Project name',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _WizardPalette.primary,
                     ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  previewUrl,
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Build Settings Header
-                Text(
-                  'Build settings',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _WizardPalette.primary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Framework / runtime selector
-                Text(
-                  'Framework',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  value: _selectedFramework, // ignore: deprecated_member_use
-                  dropdownColor: _WizardPalette.surfaceBody,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: _nameKey,
+                    controller: _nameController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.outline),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.primary),
+                      ),
                     ),
                   ),
-                  items: ['Static HTML', 'Node.js', 'Python FastAPI', 'Flask']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (val) => setState(() => _selectedFramework = val!),
-                ),
-                const SizedBox(height: 16),
-
-                // Branch to deploy
-                Text(
-                  'Branch to deploy',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  key: _branchKey,
-                  controller: _branchController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Base directory
-                Text(
-                  'Base directory',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _baseDirController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    hintText: '/',
-                    hintStyle: GoogleFonts.spaceMono(color: Colors.white30),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'The directory where Buildify installs dependencies and runs your build command.',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 10,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Build command
-                Text(
-                  'Build command',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _buildCommandController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    hintText: 'Examples: jekyll build, gulp build, make all',
-                    hintStyle: GoogleFonts.spaceMono(
-                      color: Colors.white30,
+                  const SizedBox(height: 6),
+                  Text(
+                    previewUrl,
+                    style: GoogleFonts.spaceMono(
                       fontSize: 12,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                      color: _WizardPalette.textDim,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 32),
 
-                // Publish directory
-                Text(
-                  'Publish directory',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
+                  // Build Settings Header
+                  Text(
+                    'Build settings',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _WizardPalette.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _publishDirController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    hintText: 'Examples: _site, dist, public',
-                    hintStyle: GoogleFonts.spaceMono(
-                      color: Colors.white30,
+                  const SizedBox(height: 16),
+
+                  // Framework / runtime selector
+                  Text(
+                    'Framework',
+                    style: GoogleFonts.spaceMono(
                       fontSize: 12,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                      color: _WizardPalette.textDim,
                     ),
                   ),
-                ),
-                const SizedBox(height: 32),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: _selectedFramework, // ignore: deprecated_member_use
+                    dropdownColor: _WizardPalette.surfaceBody,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.outline),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.primary),
+                      ),
+                    ),
+                    items: ['Static HTML', 'Node.js', 'Python FastAPI', 'Flask']
+                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                        .toList(),
+                    onChanged: (val) =>
+                        setState(() => _selectedFramework = val!),
+                  ),
+                  const SizedBox(height: 16),
 
-                // Environment Variables Header
-                Text(
-                  'Environment variables',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _WizardPalette.primary,
+                  // Branch to deploy
+                  Text(
+                    'Branch to deploy',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Define environment variables for more control and flexibility over your build.',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
+                  const SizedBox(height: 6),
+                  TextField(
+                    key: _branchKey,
+                    controller: _branchController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.outline),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.primary),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // Environment Variable List
-                ...List.generate(_envVars.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _envVars[index].key,
-                            style: GoogleFonts.spaceMono(
-                              color: _WizardPalette.primary,
-                              fontSize: 12,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Key',
-                              hintStyle: GoogleFonts.spaceMono(
-                                color: Colors.white30,
+                  // Base directory
+                  Text(
+                    'Base directory',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _baseDirController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      hintText: '/',
+                      hintStyle: GoogleFonts.spaceMono(color: Colors.white30),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.outline),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.primary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'The directory where Buildify installs dependencies and runs your build command.',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 10,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Build command
+                  Text(
+                    'Build command',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _buildCommandController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      hintText: 'Examples: jekyll build, gulp build, make all',
+                      hintStyle: GoogleFonts.spaceMono(
+                        color: Colors.white30,
+                        fontSize: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.outline),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.primary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Publish directory
+                  Text(
+                    'Publish directory',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _publishDirController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      hintText: 'Examples: _site, dist, public',
+                      hintStyle: GoogleFonts.spaceMono(
+                        color: Colors.white30,
+                        fontSize: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.outline),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: _WizardPalette.primary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Environment Variables Header
+                  Text(
+                    'Environment variables',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _WizardPalette.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Define environment variables for more control and flexibility over your build.',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Environment Variable List
+                  ...List.generate(_envVars.length, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _envVars[index].key,
+                              style: GoogleFonts.spaceMono(
+                                color: _WizardPalette.primary,
                                 fontSize: 12,
                               ),
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.05),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                              decoration: InputDecoration(
+                                hintText: 'Key',
+                                hintStyle: GoogleFonts.spaceMono(
+                                  color: Colors.white30,
+                                  fontSize: 12,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.05),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _envVars[index].value,
-                            style: GoogleFonts.spaceMono(
-                              color: _WizardPalette.primary,
-                              fontSize: 12,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Value',
-                              hintStyle: GoogleFonts.spaceMono(
-                                color: Colors.white30,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _envVars[index].value,
+                              style: GoogleFonts.spaceMono(
+                                color: _WizardPalette.primary,
                                 fontSize: 12,
                               ),
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.05),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                              decoration: InputDecoration(
+                                hintText: 'Value',
+                                hintStyle: GoogleFonts.spaceMono(
+                                  color: Colors.white30,
+                                  fontSize: 12,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.05),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: Colors.redAccent),
-                          onPressed: () => _removeEnvVar(index),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.redAccent),
+                            onPressed: () => _removeEnvVar(index),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
 
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: _WizardPalette.primary,
-                    ),
-                    onPressed: _addEnvVar,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(
-                      'Add environment variables',
-                      style: GoogleFonts.spaceMono(fontSize: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 48),
-
-                // Deploy Button
-                ElevatedButton(
-                  key: _deployKey,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _WizardPalette.primary,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: _WizardPalette.primary,
+                      ),
+                      onPressed: _addEnvVar,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(
+                        'Add environment variables',
+                        style: GoogleFonts.spaceMono(fontSize: 12),
+                      ),
                     ),
                   ),
-                  onPressed: _isDeploying ? null : () async {
-                    final name = _nameController.text.trim();
-                    if (name.isEmpty) return;
+                  const SizedBox(height: 48),
 
-                    setState(() {
-                      _isDeploying = true;
-                      _deployProgress = 'Initializing...';
-                    });
+                  // Deploy Button
+                  ElevatedButton(
+                    key: _deployKey,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _WizardPalette.primary,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: _isDeploying
+                        ? null
+                        : () async {
+                            final name = _nameController.text.trim();
+                            if (name.isEmpty) return;
 
-                    try {
-                      final envMap = <String, String>{};
-                      for (final entry in _envVars) {
-                        final k = entry.key.text.trim();
-                        final v = entry.value.text.trim();
-                        if (k.isNotEmpty) {
-                          envMap[k] = v;
-                        }
-                      }
+                            setState(() {
+                              _isDeploying = true;
+                              _deployProgress = 'Initializing...';
+                            });
 
-                      // Create the project in the backend (this allocates port and path)
-                      final project = await ref.read(embeddedBackendProvider).createProject(
-                            name: name,
-                            sourceType: _selectedFramework,
-                            customUrl: previewUrl,
-                            customLocalPath: widget.existingLocalPath,
-                            hostingMode: HostingMode.persistent,
-                            branch: _branchController.text.trim().isNotEmpty ? _branchController.text.trim() : 'main',
-                            buildCommand: _buildCommandController.text.trim(),
-                            publishDir: _publishDirController.text.trim(),
-                            baseDir: _baseDirController.text.trim(),
-                            envVars: envMap,
-                          );
+                            try {
+                              final envMap = <String, String>{};
+                              for (final entry in _envVars) {
+                                final k = entry.key.text.trim();
+                                final v = entry.value.text.trim();
+                                if (k.isNotEmpty) {
+                                  envMap[k] = v;
+                                }
+                              }
 
-                      // Clone the repo if we have a URL and no local path already provided
-                      if (widget.repoUrl != null && widget.repoUrl!.isNotEmpty && widget.existingLocalPath == null) {
-                        await GitService.cloneRepository(
-                          repoUrl: widget.repoUrl!,
-                          localPath: project.localPath,
-                          onProgress: (status) {
-                            if (context.mounted) {
-                              setState(() => _deployProgress = status);
+                              // Create the project in the backend (this allocates port and path)
+                              final project = await ref
+                                  .read(embeddedBackendProvider)
+                                  .createProject(
+                                    name: name,
+                                    sourceType: _selectedFramework,
+                                    customUrl: previewUrl,
+                                    customLocalPath: widget.existingLocalPath,
+                                    hostingMode: HostingMode.persistent,
+                                    branch:
+                                        _branchController.text.trim().isNotEmpty
+                                            ? _branchController.text.trim()
+                                            : 'main',
+                                    buildCommand:
+                                        _buildCommandController.text.trim(),
+                                    publishDir:
+                                        _publishDirController.text.trim(),
+                                    baseDir: _baseDirController.text.trim(),
+                                    envVars: envMap,
+                                  );
+
+                              // Clone the repo if we have a URL and no local path already provided
+                              if (widget.repoUrl != null &&
+                                  widget.repoUrl!.isNotEmpty &&
+                                  widget.existingLocalPath == null) {
+                                await GitService.cloneRepository(
+                                  repoUrl: widget.repoUrl!,
+                                  localPath: project.localPath,
+                                  onProgress: (status) {
+                                    if (context.mounted) {
+                                      setState(() => _deployProgress = status);
+                                    }
+                                  },
+                                );
+                              }
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Successfully deployed $name',
+                                      style: GoogleFonts.spaceMono(),
+                                    ),
+                                  ),
+                                );
+                                // Go back to projects home page dashboard
+                                Navigator.popUntil(
+                                    context, (route) => route.isFirst);
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Failed to deploy project: $e'),
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (context.mounted) {
+                                setState(() {
+                                  _isDeploying = false;
+                                });
+                              }
                             }
                           },
-                        );
-                      }
-
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Successfully deployed $name',
-                              style: GoogleFonts.spaceMono(),
-                            ),
-                          ),
-                        );
-                        // Go back to projects home page dashboard
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Failed to deploy project: $e'),
-                          ),
-                        );
-                      }
-                    } finally {
-                      if (context.mounted) {
-                        setState(() {
-                          _isDeploying = false;
-                        });
-                      }
-                    }
-                  },
-                  child: _isDeploying
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.black,
+                    child: _isDeploying
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _deployProgress,
-                              style: GoogleFonts.spaceMono(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
+                              const SizedBox(width: 12),
+                              Text(
+                                _deployProgress,
+                                style: GoogleFonts.spaceMono(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
                               ),
+                            ],
+                          )
+                        : Text(
+                            'Deploy $projName',
+                            style: GoogleFonts.spaceMono(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
                             ),
-                          ],
-                        )
-                      : Text(
-                          'Deploy $projName',
-                          style: GoogleFonts.spaceMono(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
                           ),
-                        ),
-                ),
-                const SizedBox(height: 40),
-              ],
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }

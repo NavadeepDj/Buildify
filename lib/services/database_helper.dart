@@ -35,7 +35,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -48,6 +48,46 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE projects ADD COLUMN publish_dir TEXT');
       await db.execute('ALTER TABLE projects ADD COLUMN base_dir TEXT');
     }
+    if (oldVersion < 3) {
+      await _createAuthTables(db);
+    }
+  }
+
+  Future<void> _createAuthTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE,
+        phone TEXT UNIQUE,
+        password_hash TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        auth_method TEXT NOT NULL,
+        email_verified INTEGER NOT NULL DEFAULT 0,
+        phone_verified INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS verification_challenges (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        channel TEXT NOT NULL,
+        target TEXT NOT NULL,
+        secret_hash TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        consumed_at INTEGER,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 5,
+        resend_count INTEGER NOT NULL DEFAULT 0,
+        last_sent_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -83,6 +123,8 @@ class DatabaseHelper {
         FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
       )
     ''');
+
+    await _createAuthTables(db);
   }
 
   // Project CRUD operations
@@ -131,8 +173,103 @@ class DatabaseHelper {
     );
   }
 
+  // User CRUD operations
+  Future<int> insertUser(Map<String, dynamic> user) async {
+    final db = await database;
+    return await db.insert('users', user, conflictAlgorithm: ConflictAlgorithm.fail);
+  }
+
+  Future<Map<String, dynamic>?> getUserById(String id) async {
+    final db = await database;
+    final results = await db.query('users', where: 'id = ?', whereArgs: [id]);
+    if (results.isNotEmpty) return results.first;
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+    final db = await database;
+    final results = await db.query(
+      'users',
+      where: 'LOWER(email) = LOWER(?)',
+      whereArgs: [email.trim()],
+    );
+    if (results.isNotEmpty) return results.first;
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getUserByPhone(String phone) async {
+    final db = await database;
+    final results = await db.query(
+      'users',
+      where: 'phone = ?',
+      whereArgs: [phone.trim()],
+    );
+    if (results.isNotEmpty) return results.first;
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getUserByIdentifier(String identifier) async {
+    final db = await database;
+    final trimmed = identifier.trim();
+    final results = await db.query(
+      'users',
+      where: 'LOWER(email) = LOWER(?) OR phone = ? OR LOWER(name) = LOWER(?)',
+      whereArgs: [trimmed, trimmed, trimmed],
+      limit: 1,
+    );
+    if (results.isNotEmpty) return results.first;
+    return null;
+  }
+
+  Future<int> updateUser(String id, Map<String, dynamic> updates) async {
+    final db = await database;
+    return await db.update('users', updates, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Verification Challenge operations
+  Future<int> insertChallenge(Map<String, dynamic> challenge) async {
+    final db = await database;
+    return await db.insert('verification_challenges', challenge, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<Map<String, dynamic>?> getChallenge(String id) async {
+    final db = await database;
+    final results = await db.query('verification_challenges', where: 'id = ?', whereArgs: [id]);
+    if (results.isNotEmpty) return results.first;
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> getActiveChallengesForUser(String userId, String channel) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return await db.query(
+      'verification_challenges',
+      where: 'user_id = ? AND channel = ? AND consumed_at IS NULL AND expires_at > ?',
+      whereArgs: [userId, channel, now],
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getActiveChallengesByTarget(String target, String channel) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return await db.query(
+      'verification_challenges',
+      where: 'target = ? AND channel = ? AND consumed_at IS NULL AND expires_at > ?',
+      whereArgs: [target, channel, now],
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  Future<int> updateChallenge(String id, Map<String, dynamic> updates) async {
+    final db = await database;
+    return await db.update('verification_challenges', updates, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<void> clearAll() async {
     final db = await database;
+    await db.delete('verification_challenges');
+    await db.delete('users');
     await db.delete('deployments');
     await db.delete('projects');
   }

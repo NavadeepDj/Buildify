@@ -168,6 +168,8 @@ class BackendState {
     required this.activeSession,
     required this.logs,
     required this.hostMappings,
+    this.isUserVerified = false,
+    this.activeUserId,
   });
 
   final String userName;
@@ -176,6 +178,8 @@ class BackendState {
   final BackendSession? activeSession;
   final List<BackendLogEvent> logs;
   final Map<String, String> hostMappings;
+  final bool isUserVerified;
+  final String? activeUserId;
 
   BackendState copyWith({
     String? userName,
@@ -184,6 +188,8 @@ class BackendState {
     BackendSession? activeSession,
     List<BackendLogEvent>? logs,
     Map<String, String>? hostMappings,
+    bool? isUserVerified,
+    String? activeUserId,
   }) {
     return BackendState(
       userName: userName ?? this.userName,
@@ -192,6 +198,8 @@ class BackendState {
       activeSession: activeSession,
       logs: logs ?? this.logs,
       hostMappings: hostMappings ?? this.hostMappings,
+      isUserVerified: isUserVerified ?? this.isUserVerified,
+      activeUserId: activeUserId ?? this.activeUserId,
     );
   }
 }
@@ -205,6 +213,7 @@ class EmbeddedBackendService {
         activeSession: null,
         logs: [],
         hostMappings: {},
+        isUserVerified: false,
       ) {
     unawaited(hydrateProjects());
   }
@@ -305,8 +314,16 @@ class EmbeddedBackendService {
     }
   }
 
-  Future<void> devLogin({String userName = 'user'}) async {
-    _emit(_state.copyWith(userName: userName));
+  Future<void> devLogin({
+    String userName = 'user',
+    bool isVerified = true,
+    String? userId,
+  }) async {
+    _emit(_state.copyWith(
+      userName: userName,
+      isUserVerified: isVerified,
+      activeUserId: userId,
+    ));
   }
 
   Future<List<BackendProject>> listProjects() async => _state.projects;

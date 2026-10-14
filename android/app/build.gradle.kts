@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.buildify_flutter"
+    namespace = "com.example.buildify"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.buildify_flutter"
+        applicationId = "com.example.buildify"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -37,25 +37,8 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-
-    // Force AGP to extract jniLibs into nativeLibraryDir on install.
-    // We use jniLibs to ship llama-server (renamed to libllama-server.so) and
-    // its companion .so files so Android allows executing the binary.
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-        }
-    }
 }
 
 flutter {
     source = "../.."
-}
-
-configurations.all {
-    resolutionStrategy {
-        force("androidx.browser:browser:1.8.0")
-        force("androidx.core:core:1.13.1")
-        force("androidx.core:core-ktx:1.13.1")
-    }
 }

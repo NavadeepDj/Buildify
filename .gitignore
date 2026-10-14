@@ -12,98 +12,34 @@
 .swiftpm/
 migrate_working_dir/
 
-# Secrets and local env (never commit)
-.env
-.env.*
-!.env.example
-*.pem
-secrets/
-**/google-services.json
-**/GoogleService-Info.plist
-
-# IntelliJ / Android Studio
+# IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# VS Code — uncomment to ignore local launch configs
-# .vscode/
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
 
-# Flutter / Dart / Pub
+# Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-.packages
 .pub-cache/
 .pub/
-build/
-**/build/
+/build/
 
-# Generated / coverage
-coverage/
-*.freezed.dart
-*.g.dart
-# (uncomment if you use code generation heavily)
-# *.mocks.dart
-
-# Symbolication / obfuscation
+# Symbolication related
 app.*.symbols
+
+# Obfuscation related
 app.*.map.json
 
-# Android — see also android/.gitignore
+# Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
-**/local.properties
-
-# iOS
-**/ios/Pods/
-**/ios/.symlinks/
-**/ios/Flutter/Flutter.framework
-**/ios/Flutter/Flutter.podspec
-**/ios/ServiceDefinitions.json
-
-# macOS (optional local framework copies)
-**/macos/Flutter/ephemeral/
-
-# FVM
-.fvm/
-
-# Large local copies of release tarballs (optional — remove line if you track them)
-llama-b*/
-
-# Native binaries shipped via jniLibs — use Git LFS or document manual copy steps
-# README.txt files are tracked so the folder structure and docs remain in the repo
-android/app/src/main/jniLibs/arm64-v8a/lib*.so
-android/app/src/main/jniLibs/arm64-v8a/LICENSE
-android/app/src/main/jniLibs/armeabi-v7a/lib*.so
-
-# APK / bundle outputs (optional local builds)
-*.apk
-*.aab
-*.ipa
-
-# Demo / marketing videos (large binaries — keep out of repo)
-*.mp4
-*.mov
-demo-video/
-
-# Marketing site (website/) — Node-side ignores
-website/node_modules
-website/.next
-website/.vercel
-website/.data
-website/out
-
-# Demo video — keep repo lean: ignore heavy source footage & raw/oversized exports.
-# Tracked on purpose: demo-video/index.html, sketch.js, *.md,
-# demo-video/buildify-brief.mp4, demo-video/buildify-brief-small.gif
-# (NOTE: .gitignore has no inline comments — keep patterns on their own lines)
-clip*.mp4
-demo-video/clips/
-demo-video/*.webm
-demo-video/buildify-brief.gif
-demo-video/_sheets/
