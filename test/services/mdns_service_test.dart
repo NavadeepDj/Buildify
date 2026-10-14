@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:buildify_flutter/services/mdns_service.dart';
+import 'package:buildify/services/mdns_service.dart';
 
 void main() {
   test(
@@ -12,6 +12,7 @@ void main() {
       await beacon.start(
         serverPort: 8080,
         modelName: 'gemma-2b',
+        secret: 'test-secret',
         bindAddress: InternetAddress.loopbackIPv4,
       );
       expect(beacon.isRunning, isTrue);
@@ -30,7 +31,7 @@ void main() {
         }
       });
 
-      final query = utf8.encode('BUILDIFY_DISCOVER');
+      final query = utf8.encode('BUILDIFY_DISCOVER:test-secret');
       client.send(
           query, InternetAddress.loopbackIPv4, BuildifyDiscoveryBeacon.beaconPort);
 
