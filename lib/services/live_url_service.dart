@@ -224,14 +224,16 @@ class LiveUrlService {
   Future<void> startProjectTunnel(String id) async {
     try {
       _errors.remove(id);
-      if (!project(id).isLive)
+      if (!project(id).isLive) {
         throw const HttpException('Start the project server first.');
+      }
       await start();
       await setStatus(id, 'Provisioning');
       await gateway.start(routerPort);
       if (_disposed ||
-          !backend.state.projects.any((p) => p.id == id && p.isLive))
+          !backend.state.projects.any((p) => p.id == id && p.isLive)) {
         return;
+      }
       await activate(id);
     } catch (e) {
       if (!_disposed &&

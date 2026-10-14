@@ -147,7 +147,7 @@ Local smoke test, substituting the assigned slug:
 ```sh
 curl -H "Host: my-project-a3b91f.buildiify.tech" http://127.0.0.1:8787/
 curl -H "Host: unknown.buildiify.tech" http://127.0.0.1:8787/
-curl -H "Authorization: Bearer YOUR_MANAGEMENT_TOKEN" http://127.0.0.1:8788/api/projects/PROJECT_ID
+curl -H "Authorization: Bearer $MANAGEMENT_TOKEN" http://127.0.0.1:8788/api/projects/$PROJECT_ID
 ```
 
 Request flow: **browser → Cloudflare wildcard DNS/TLS → existing gateway tunnel

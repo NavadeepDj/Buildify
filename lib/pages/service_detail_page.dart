@@ -465,8 +465,9 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
                               onTimeRangeTap: () {
                                 setState(() {
                                   _showCustomRange = !_showCustomRange;
-                                  if (!_showCustomRange)
+                                  if (!_showCustomRange) {
                                     _timeRange = 'last hour';
+                                  }
                                 });
                               },
                               onApplyCustomRange: () {
@@ -1241,7 +1242,7 @@ class _SecuritySection extends StatelessWidget {
                     Switch(
                       value: requireApiKey,
                       onChanged: onToggleRequire,
-                      activeThumbColor: _DetailPalette.primary,
+                      activeColor: _DetailPalette.primary,
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
@@ -1453,7 +1454,7 @@ class _HealthThresholdsSection extends StatelessWidget {
                     Switch(
                       value: thermalStop,
                       onChanged: onThermalChanged,
-                      activeThumbColor: _DetailPalette.primary,
+                      activeColor: _DetailPalette.primary,
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
@@ -1577,7 +1578,7 @@ class _RuntimeControlsSection extends StatelessWidget {
                     Switch(
                       value: lowPowerMode,
                       onChanged: onLowPowerChanged,
-                      activeThumbColor: _DetailPalette.primary,
+                      activeColor: _DetailPalette.primary,
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
@@ -2676,11 +2677,18 @@ class _LogLineWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color messageColor = _DetailPalette.onSurface;
-    if (line.highlight) messageColor = _DetailPalette.primary;
-    if (line.success) messageColor = _DetailPalette.successGreen;
-    if (line.warning) messageColor = _DetailPalette.statusSuspended;
-    if (line.dim)
+    if (line.highlight) {
+      messageColor = _DetailPalette.primary;
+    }
+    if (line.success) {
+      messageColor = _DetailPalette.successGreen;
+    }
+    if (line.warning) {
+      messageColor = _DetailPalette.statusSuspended;
+    }
+    if (line.dim) {
       messageColor = _DetailPalette.onSurfaceVariant.withValues(alpha: 0.6);
+    }
 
     Widget messageChild = Text(
       line.message,
