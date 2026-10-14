@@ -1242,8 +1242,7 @@ class _SecuritySection extends StatelessWidget {
                     Switch(
                       value: requireApiKey,
                       onChanged: onToggleRequire,
-                      activeColor:
-                          _DetailPalette.primary, // ignore: deprecated_member_use
+                      activeColor: _DetailPalette.primary, // ignore: deprecated_member_use
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
@@ -1455,8 +1454,7 @@ class _HealthThresholdsSection extends StatelessWidget {
                     Switch(
                       value: thermalStop,
                       onChanged: onThermalChanged,
-                      activeColor:
-                          _DetailPalette.primary, // ignore: deprecated_member_use
+                      activeColor: _DetailPalette.primary, // ignore: deprecated_member_use
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
@@ -1580,8 +1578,7 @@ class _RuntimeControlsSection extends StatelessWidget {
                     Switch(
                       value: lowPowerMode,
                       onChanged: onLowPowerChanged,
-                      activeColor:
-                          _DetailPalette.primary, // ignore: deprecated_member_use
+                      activeColor: _DetailPalette.primary, // ignore: deprecated_member_use
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
