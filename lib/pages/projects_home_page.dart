@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../models/ai_server_models.dart';
 import '../providers/ai_server_provider.dart';
+import '../providers/auth_provider.dart';
 import '../backend/embedded_backend.dart';
 import '../services/guided_tour_service.dart';
 import '../widgets/guided_tour_overlay.dart';
@@ -498,9 +499,54 @@ class _ProjectsTopBar extends StatelessWidget {
             icon: const Icon(Icons.help_outline, color: _ProjectsPalette.onSurface),
             tooltip: 'Guided Tour',
           ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.person_outline, color: _ProjectsPalette.onSurface),
+          Consumer(
+            builder: (context, ref, _) {
+              final user = ref.watch(currentUserProvider);
+              if (user == null) {
+                return IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.person_outline, color: _ProjectsPalette.onSurface),
+                );
+              }
+              return Tooltip(
+                message: '${user.name} (${user.isVerified ? 'Verified' : 'Unverified'})',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: user.isVerified
+                          ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                          : const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        user.isVerified
+                            ? Icons.verified
+                            : Icons.warning_amber_rounded,
+                        size: 14,
+                        color: user.isVerified
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFF59E0B),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        user.name,
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _ProjectsPalette.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
