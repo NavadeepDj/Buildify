@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'pages/ai_model_select_page.dart';
+import 'pages/auth_page.dart';
 import 'pages/projects_home_page.dart';
 import 'theme/app_palette.dart';
 
@@ -50,13 +51,19 @@ class BuildifyApp extends ConsumerWidget {
           ),
         ),
       ),
-      home: Builder(
-        builder: (context) => ProjectsHomePage(
-          onRunAiModel: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const AiModelSelectPage()),
-          ),
-        ),
-      ),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const AuthPage(),
+        '/projects':
+            (context) => ProjectsHomePage(
+              onRunAiModel:
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AiModelSelectPage(),
+                    ),
+                  ),
+            ),
+      },
     );
   }
 }
