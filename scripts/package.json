@@ -1,0 +1,7 @@
+{
+  "name": "buildiify-tunnel-setup",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": { "yaml": "^2.8.1" },
+  "scripts": { "test": "node --test setup-tunnel.test.js" }
+}

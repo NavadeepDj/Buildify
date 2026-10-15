@@ -9,10 +9,13 @@ import 'package:uuid/uuid.dart';
 import '../services/database_helper.dart';
 import '../services/static_site_server.dart';
 import '../services/process_server.dart';
-import '../services/native_server_bridge.dart';
+import '../services/live_url_service.dart';
 
 enum BackendLogType { request, error, system }
+
 enum HostingMode { persistent, ephemeral }
+
+const _keepActiveSession = Object();
 
 class BackendLogEvent {
   const BackendLogEvent({
@@ -48,8 +51,14 @@ class BackendProject {
     this.baseDir = '',
     this.port = 3000,
     this.envVars = const {},
+    this.subdomain = '',
+    this.liveUrl = '',
+    this.liveUrlStatus = 'Stopped',
   });
 
+  final String subdomain;
+  final String liveUrl;
+  final String liveUrlStatus;
   final String id;
   final String name;
   final String repoProvider;
@@ -66,6 +75,9 @@ class BackendProject {
   final Map<String, String> envVars;
 
   BackendProject copyWith({
+    String? subdomain,
+    String? liveUrl,
+    String? liveUrlStatus,
     String? name,
     String? repoProvider,
     String? url,
@@ -82,6 +94,9 @@ class BackendProject {
   }) {
     return BackendProject(
       id: id,
+      subdomain: subdomain ?? this.subdomain,
+      liveUrl: liveUrl ?? this.liveUrl,
+      liveUrlStatus: liveUrlStatus ?? this.liveUrlStatus,
       name: name ?? this.name,
       repoProvider: repoProvider ?? this.repoProvider,
       url: url ?? this.url,
@@ -181,7 +196,7 @@ class BackendState {
     String? userName,
     List<BackendProject>? projects,
     List<BackendDeployment>? deployments,
-    BackendSession? activeSession,
+    Object? activeSession = _keepActiveSession,
     List<BackendLogEvent>? logs,
     Map<String, String>? hostMappings,
   }) {
@@ -189,7 +204,9 @@ class BackendState {
       userName: userName ?? this.userName,
       projects: projects ?? this.projects,
       deployments: deployments ?? this.deployments,
-      activeSession: activeSession,
+      activeSession: identical(activeSession, _keepActiveSession)
+          ? this.activeSession
+          : activeSession as BackendSession?,
       logs: logs ?? this.logs,
       hostMappings: hostMappings ?? this.hostMappings,
     );
@@ -197,7 +214,7 @@ class BackendState {
 }
 
 class EmbeddedBackendService {
-  EmbeddedBackendService()
+  EmbeddedBackendService({bool autoHydrate = true, this.projectPortStart = 3000})
     : _state = const BackendState(
         userName: 'user',
         projects: [],
@@ -206,9 +223,10 @@ class EmbeddedBackendService {
         logs: [],
         hostMappings: {},
       ) {
-    unawaited(hydrateProjects());
+    if (autoHydrate) unawaited(hydrateProjects());
   }
 
+  final int projectPortStart;
   final _uuid = const Uuid();
   final _rand = Random();
   final _stateController = StreamController<BackendState>.broadcast();
@@ -216,7 +234,7 @@ class EmbeddedBackendService {
   final _sessionControllers = <String, StreamController<BackendSession>>{};
   final _staticServers = <String, StaticSiteServer>{};
   final _processServers = <String, ProcessServer>{};
-  final _nativeBridge = const NativeServerBridge();
+  late final liveUrls = LiveUrlService(this);
   Timer? _ticker;
   BackendState _state;
 
@@ -225,40 +243,61 @@ class EmbeddedBackendService {
 
   Future<void> hydrateProjects() async {
     try {
-      final dbProjects = await DatabaseHelper.instance.getProjects();
-      final loaded = dbProjects.map((row) {
-        Map<String, String> parsedEnv = {};
-        try {
-          if (row['env_vars'] != null) {
-            parsedEnv = Map<String, String>.from(jsonDecode(row['env_vars'] as String));
-          }
-        } catch (_) {}
-        return BackendProject(
-          id: row['id'] as String,
-          name: row['name'] as String,
-          repoProvider: row['type'] as String,
-          url: row['source_uri'] as String,
-          lastDeployedAt: DateTime.fromMillisecondsSinceEpoch(row['last_active_at'] as int),
-          isLive: row['desired_state'] == 'running',
-          hostingMode: row['hosting_mode'] == 'ephemeral'
-              ? HostingMode.ephemeral
-              : HostingMode.persistent,
-          localPath: row['local_path'] as String,
-          branch: row['branch'] as String? ?? 'main',
-          buildCommand: row['build_command'] as String? ?? '',
-          publishDir: row['publish_dir'] as String? ?? '',
-          baseDir: row['base_dir'] as String? ?? '',
-          port: row['port'] as int? ?? 3000,
-          envVars: parsedEnv,
-        );
-      }).toList();
+      final dbProjects = (await DatabaseHelper.instance.getProjects()).toList();
+      for (final row in dbProjects.where(
+        (r) => r['hosting_mode'] == 'ephemeral',
+      )) {
+        await DatabaseHelper.instance.deleteProject(row['id'] as String);
+      }
+      dbProjects.removeWhere((r) => r['hosting_mode'] == 'ephemeral');
+      final loaded =
+          dbProjects.map((row) {
+            Map<String, String> parsedEnv = {};
+            try {
+              if (row['env_vars'] != null) {
+                parsedEnv = Map<String, String>.from(
+                  jsonDecode(row['env_vars'] as String),
+                );
+              }
+            } catch (_) {}
+            return BackendProject(
+              id: row['id'] as String,
+              name: row['name'] as String,
+              subdomain: row['subdomain'] as String? ?? '',
+              liveUrl: row['live_url'] as String? ?? '',
+              liveUrlStatus: 'Stopped',
+              repoProvider: row['type'] as String,
+              url: row['source_uri'] as String,
+              lastDeployedAt: DateTime.fromMillisecondsSinceEpoch(
+                row['last_active_at'] as int,
+              ),
+              isLive: row['desired_state'] == 'running',
+              hostingMode:
+                  row['hosting_mode'] == 'ephemeral'
+                      ? HostingMode.ephemeral
+                      : HostingMode.persistent,
+              localPath: row['local_path'] as String,
+              branch: row['branch'] as String? ?? 'main',
+              buildCommand: row['build_command'] as String? ?? '',
+              publishDir: row['publish_dir'] as String? ?? '',
+              baseDir: row['base_dir'] as String? ?? '',
+              port: row['port'] as int? ?? 3000,
+              envVars: parsedEnv,
+            );
+          }).toList();
       _emit(_state.copyWith(projects: loaded));
 
+      for (final p in loaded.where((p) => p.subdomain.isEmpty)) {
+        await liveUrls.assign(p.id);
+      }
+      await liveUrls.start();
       // Resume the project that was live when the app was last closed. Only one
       // tunnel/session is supported at a time, so restore the most recently
       // active persistent project whose desired_state is 'running'.
       await _restoreRunningProject(dbProjects);
-    } catch (_) {}
+    } catch (e) {
+      stderr.writeln('Project hydration failed: $e');
+    }
   }
 
   /// Persists a project's run intent so it can be resumed after an app restart.
@@ -275,15 +314,20 @@ class EmbeddedBackendService {
   /// shutdown. Any stale extra 'running' rows are reset to 'stopped' since the
   /// backend only supports a single active session/tunnel.
   Future<void> _restoreRunningProject(List<Map<String, dynamic>> rows) async {
-    final running = rows
-        .where((r) =>
-            r['desired_state'] == 'running' &&
-            (r['hosting_mode'] ?? 'persistent') != 'ephemeral')
-        .toList();
+    final running =
+        rows
+            .where(
+              (r) =>
+                  r['desired_state'] == 'running' &&
+                  (r['hosting_mode'] ?? 'persistent') != 'ephemeral',
+            )
+            .toList();
     if (running.isEmpty) return;
 
-    running.sort((a, b) =>
-        (b['last_active_at'] as int).compareTo(a['last_active_at'] as int));
+    running.sort(
+      (a, b) =>
+          (b['last_active_at'] as int).compareTo(a['last_active_at'] as int),
+    );
 
     // Reset any stale extra running rows — only one can actually be live.
     for (final r in running.skip(1)) {
@@ -294,12 +338,20 @@ class EmbeddedBackendService {
 
     final targetId = running.first['id'] as String;
     try {
-      _log(targetId, 'system', '-- resuming project after app restart --',
-          BackendLogType.system);
+      _log(
+        targetId,
+        'system',
+        '-- resuming project after app restart --',
+        BackendLogType.system,
+      );
       await startSession(projectId: targetId);
     } catch (e) {
-      _log(targetId, 'system', '[ERR] Auto-resume failed: $e',
-          BackendLogType.error);
+      _log(
+        targetId,
+        'system',
+        '[ERR] Auto-resume failed: $e',
+        BackendLogType.error,
+      );
       await _persistDesiredState(targetId, 'stopped');
       _updateProject(targetId, (p) => p.copyWith(isLive: false));
     }
@@ -323,7 +375,6 @@ class EmbeddedBackendService {
     String baseDir = '',
     Map<String, String> envVars = const {},
   }) async {
-    final slug = name.toLowerCase().replaceAll(' ', '-');
     final id = _uuid.v4();
 
     String localPath = customLocalPath ?? '';
@@ -343,18 +394,20 @@ class EmbeddedBackendService {
       }
     } catch (_) {}
 
-    int assignedPort = 3000;
+    int assignedPort = projectPortStart;
     final usedPorts = _state.projects.map((p) => p.port).toSet();
-    while (usedPorts.contains(assignedPort) && assignedPort < 3100) {
+    while (usedPorts.contains(assignedPort) && assignedPort < projectPortStart + 100) {
       assignedPort++;
     }
-    if (assignedPort >= 3100) throw Exception('Port exhaustion: maximum of 100 projects allowed.');
+    if (assignedPort >= projectPortStart + 100) {
+      throw Exception('Port exhaustion: maximum of 100 projects allowed.');
+    }
 
     final p = BackendProject(
       id: id,
       name: name,
       repoProvider: sourceType,
-      url: customUrl ?? 'https://$slug.buildify.app',
+      url: customUrl ?? '',
       lastDeployedAt: DateTime.now(),
       isLive: false,
       hostingMode: hostingMode,
@@ -367,17 +420,17 @@ class EmbeddedBackendService {
       envVars: envVars,
     );
 
-    if (hostingMode == HostingMode.persistent) {
+    {
       try {
         await DatabaseHelper.instance.insertProject({
           'id': p.id,
           'name': p.name,
           'type': p.repoProvider,
-          'hosting_mode': 'persistent',
+          'hosting_mode': hostingMode.name,
           'source_uri': p.url,
           'local_path': p.localPath,
           'port': p.port,
-          'subdomain': slug,
+          'subdomain': null,
           'env_vars': jsonEncode(p.envVars),
           'branch': p.branch,
           'build_command': p.buildCommand,
@@ -387,7 +440,9 @@ class EmbeddedBackendService {
           'created_at': DateTime.now().millisecondsSinceEpoch,
           'last_active_at': DateTime.now().millisecondsSinceEpoch,
         });
-      } catch (_) {}
+      } catch (e) {
+        rethrow;
+      }
     }
 
     final host = Uri.tryParse(p.url)?.host;
@@ -401,7 +456,8 @@ class EmbeddedBackendService {
         hostMappings: hostMappings,
       ),
     );
-    return p;
+    await liveUrls.assign(p.id);
+    return _state.projects.firstWhere((item) => item.id == p.id);
   }
 
   String generateRandomSubdomain() {
@@ -472,13 +528,16 @@ class EmbeddedBackendService {
     String tunnelProvider = 'cloudflare',
   }) async {
     _ticker?.cancel();
+    final existing = _state.activeSession;
+    if (existing != null) await stopSession(sessionId: existing.id);
 
     final project = _state.projects.firstWhere((p) => p.id == projectId);
 
     // Resolve working directory (base_dir is relative to localPath)
-    final workDir = project.baseDir.isNotEmpty
-        ? join(project.localPath, project.baseDir)
-        : project.localPath;
+    final workDir =
+        project.baseDir.isNotEmpty
+            ? join(project.localPath, project.baseDir)
+            : project.localPath;
 
     // --- Build step (static sites only) ---
     // For process-type projects, buildCommand is the server start command,
@@ -486,22 +545,34 @@ class EmbeddedBackendService {
     final isProcessServer = _needsProcessServer(project.repoProvider);
 
     if (!isProcessServer && project.buildCommand.isNotEmpty) {
-      _log(projectId, 'system', '-- running build: ${project.buildCommand} --',
-          BackendLogType.system);
+      _log(
+        projectId,
+        'system',
+        '-- running build: ${project.buildCommand} --',
+        BackendLogType.system,
+      );
 
       final buildOk = await ProcessServer.runBuild(
         command: project.buildCommand,
         workingDirectory: workDir,
         environment: project.envVars,
         onLog: (msg, {bool isError = false}) {
-          _log(projectId, 'build', msg,
-              isError ? BackendLogType.error : BackendLogType.system);
+          _log(
+            projectId,
+            'build',
+            msg,
+            isError ? BackendLogType.error : BackendLogType.system,
+          );
         },
       );
 
       if (!buildOk) {
-        _log(projectId, 'system', '-- build failed; aborting start --',
-            BackendLogType.error);
+        _log(
+          projectId,
+          'system',
+          '-- build failed; aborting start --',
+          BackendLogType.error,
+        );
         throw Exception('Build command failed. Check logs for details.');
       }
     }
@@ -509,16 +580,23 @@ class EmbeddedBackendService {
     // --- Server start ---
     if (isProcessServer) {
       if (project.buildCommand.isEmpty) {
-        _log(projectId, 'system',
-            '[ERR] No start command configured for process server',
-            BackendLogType.error);
+        _log(
+          projectId,
+          'system',
+          '[ERR] No start command configured for process server',
+          BackendLogType.error,
+        );
         throw Exception(
-            'No start command configured. Set a start command in project settings.');
+          'No start command configured. Set a start command in project settings.',
+        );
       }
 
-      _log(projectId, 'system',
-          '-- starting process server on port ${project.port} --',
-          BackendLogType.system);
+      _log(
+        projectId,
+        'system',
+        '-- starting process server on port ${project.port} --',
+        BackendLogType.system,
+      );
 
       final srv = ProcessServer(
         command: project.buildCommand,
@@ -526,55 +604,70 @@ class EmbeddedBackendService {
         port: project.port,
         environment: project.envVars,
         onLog: (msg, {bool isError = false}) {
-          _log(projectId, 'server', msg,
-              isError ? BackendLogType.error : BackendLogType.request);
+          _log(
+            projectId,
+            'server',
+            msg,
+            isError ? BackendLogType.error : BackendLogType.request,
+          );
         },
       );
       try {
         await srv.start();
         _processServers[projectId] = srv;
       } catch (e) {
-        _log(projectId, 'system', '[ERR] Failed to start process: $e',
-            BackendLogType.error);
+        _log(
+          projectId,
+          'system',
+          '[ERR] Failed to start process: $e',
+          BackendLogType.error,
+        );
         rethrow;
       }
     } else {
       // Static file server
-      _log(projectId, 'system',
-          '-- starting static site server on port ${project.port} --',
-          BackendLogType.system);
+      _log(
+        projectId,
+        'system',
+        '-- starting static site server on port ${project.port} --',
+        BackendLogType.system,
+      );
 
       final server = StaticSiteServer(
         localPath: project.localPath,
         port: project.port,
         publishDir: project.publishDir,
         onLog: (msg, {bool isError = false}) {
-          _log(projectId, 'server', msg,
-              isError ? BackendLogType.error : BackendLogType.request);
+          _log(
+            projectId,
+            'server',
+            msg,
+            isError ? BackendLogType.error : BackendLogType.request,
+          );
         },
       );
       try {
         await server.start();
         _staticServers[projectId] = server;
       } catch (e) {
-        _log(projectId, 'system',
-            '[ERR] Failed to bind server port ${project.port}: $e',
-            BackendLogType.error);
+        _log(
+          projectId,
+          'system',
+          '[ERR] Failed to bind server port ${project.port}: $e',
+          BackendLogType.error,
+        );
         rethrow;
       }
     }
 
-    _log(projectId, 'system', '-- starting cloudflare tunnel --',
-        BackendLogType.system);
-
-    await _nativeBridge.startTunnel(port: project.port);
+    await liveUrls.start();
 
     final session = BackendSession(
       id: _uuid.v4(),
       projectId: projectId,
       startedAt: DateTime.now(),
       isRunning: true,
-      publicUrl: publicUrl ?? project.url,
+      publicUrl: project.liveUrl,
       tunnelProvider: tunnelProvider,
       requestCount: 0,
       rps: 0,
@@ -588,24 +681,7 @@ class EmbeddedBackendService {
       await _persistDesiredState(projectId, 'running');
     }
 
-    // Poll for the tunnel public URL
-    _ticker = Timer.periodic(const Duration(seconds: 2), (_) async {
-      final current = _state.activeSession;
-      if (current == null || !current.isRunning) return;
-
-      final status = await _nativeBridge.getTunnelStatus();
-      if (status != null &&
-          status.publicUrl != null &&
-          status.publicUrl!.isNotEmpty) {
-        if (current.publicUrl != status.publicUrl) {
-          final next = current.copyWith(publicUrl: status.publicUrl);
-          _emit(_state.copyWith(activeSession: next));
-          _log(projectId, current.id,
-              '-- tunnel active at ${status.publicUrl} --',
-              BackendLogType.system);
-        }
-      }
-    });
+    unawaited(liveUrls.startProjectTunnel(projectId));
 
     return session;
   }
@@ -625,27 +701,28 @@ class EmbeddedBackendService {
     final current = _state.activeSession;
     if (current == null || current.id != sessionId) return;
     _ticker?.cancel();
-    
+
     _log(
       current.projectId,
       sessionId,
       '-- stopping server and tunnel --',
       BackendLogType.system,
     );
-    
+
     // Stop static server or process server
     await _staticServers[current.projectId]?.stop();
     _staticServers.remove(current.projectId);
     await _processServers[current.projectId]?.stop();
     _processServers.remove(current.projectId);
-    
-    // Stop tunnel
-    await _nativeBridge.stopTunnel();
+
+    // The named gateway tunnel is managed independently.
+    await liveUrls.setStatus(current.projectId, 'Stopped');
 
     _updateProject(current.projectId, (p) => p.copyWith(isLive: false));
     _emit(_state.copyWith(activeSession: null));
 
-    final proj = _state.projects.where((p) => p.id == current.projectId).firstOrNull;
+    final proj =
+        _state.projects.where((p) => p.id == current.projectId).firstOrNull;
     if (proj != null && proj.hostingMode == HostingMode.persistent) {
       // Clear run intent so it stays stopped across restarts.
       await _persistDesiredState(current.projectId, 'stopped');
@@ -658,6 +735,13 @@ class EmbeddedBackendService {
   Future<void> deleteProject(String id) async {
     final proj = _state.projects.where((p) => p.id == id).firstOrNull;
     if (proj == null) return;
+    final session = _state.activeSession;
+    if (session?.projectId == id) {
+      await _staticServers.remove(id)?.stop();
+      await _processServers.remove(id)?.stop();
+      _emit(_state.copyWith(activeSession: null));
+    }
+    await DatabaseHelper.instance.deleteProject(id);
 
     if (proj.hostingMode == HostingMode.persistent) {
       try {
@@ -696,6 +780,7 @@ class EmbeddedBackendService {
 
   void dispose() {
     _ticker?.cancel();
+    liveUrls.dispose();
     _stateController.close();
     for (final c in _projectLogControllers.values) {
       c.close();
@@ -737,6 +822,14 @@ class EmbeddedBackendService {
     if (_projectLogControllers.containsKey(projectId)) {
       _projectLogControllers[projectId]!.add(event);
     }
+  }
+
+  void updateLiveUrl(String id, String subdomain, String url, String status) {
+    _updateProject(
+      id,
+      (p) =>
+          p.copyWith(subdomain: subdomain, liveUrl: url, liveUrlStatus: status),
+    );
   }
 
   void _updateProject(

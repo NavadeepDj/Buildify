@@ -23,6 +23,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "getGatewayConnectorToken" -> result.success(BuildConfig.CF_TUNNEL_TOKEN)
                     "startServer" -> {
                         val modelPath = call.argument<String>("modelPath")
                         val port = call.argument<Int>("port") ?: 8080
@@ -91,7 +92,17 @@ class MainActivity : FlutterActivity() {
                     "startTunnel" -> {
                         val port = call.argument<Int>("port") ?: 8080
                         val tunnelUrl = call.argument<String>("tunnelUrl")
-                        CloudflareTunnelService.startTunnel(this, port, tunnelUrl)
+                        val token = call.argument<String>("tunnelToken")
+                        val active = CloudflareTunnelService.currentStatus == TunnelStatus.RUNNING ||
+                            CloudflareTunnelService.currentStatus == TunnelStatus.STARTING
+                        if (active) {
+                            val sameMode = CloudflareTunnelService.isGateway == !token.isNullOrBlank()
+                            result.success(mapOf("ok" to sameMode,
+                                "status" to CloudflareTunnelService.currentStatus.name.lowercase(),
+                                "message" to if (sameMode) null else "Stop the active tunnel before switching tunnel modes."))
+                            return@setMethodCallHandler
+                        }
+                        CloudflareTunnelService.startTunnel(this, port, tunnelUrl, token)
                         result.success(
                             mapOf(
                                 "ok" to true,
@@ -115,6 +126,7 @@ class MainActivity : FlutterActivity() {
                             mapOf(
                                 "status" to CloudflareTunnelService.currentStatus.name.lowercase(),
                                 "publicUrl" to CloudflareTunnelService.lastPublicUrl,
+                                "isGateway" to CloudflareTunnelService.isGateway,
                                 "lastError" to CloudflareTunnelService.lastError,
                             ),
                         )

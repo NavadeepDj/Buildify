@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+*.pptx
 .DS_Store
 .atom/
 .build/
@@ -58,6 +59,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 **/local.properties
+.kotlin/
 
 # iOS
 **/ios/Pods/
@@ -93,6 +95,7 @@ demo-video/
 
 # Marketing site (website/) — Node-side ignores
 website/node_modules
+scripts/node_modules/
 website/.next
 website/.vercel
 website/.data

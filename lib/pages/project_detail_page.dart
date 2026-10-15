@@ -9,6 +9,7 @@ import '../backend/embedded_backend.dart';
 import '../providers/ai_server_provider.dart';
 import '../services/guided_tour_service.dart';
 import '../widgets/guided_tour_overlay.dart';
+import '../services/subdomain.dart';
 
 class ProjectDetailPage extends ConsumerStatefulWidget {
   const ProjectDetailPage({super.key, required this.projectId});
@@ -22,6 +23,7 @@ class ProjectDetailPage extends ConsumerStatefulWidget {
 class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
   final _logSearchController = TextEditingController();
   final _logScrollController = ScrollController();
+  bool _tunnelBusy = false;
 
   final _controlKey = GlobalKey();
   final _endpointKey = GlobalKey();
@@ -81,7 +83,7 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await launchUrl(uri, mode: LaunchMode.externalApplication, webOnlyWindowName: '_blank');
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,6 +91,133 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
         );
       }
     }
+  }
+
+  Future<void> _urlAction(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
+
+  Future<void> _editSubdomain(BackendProject project) async {
+    final controller = TextEditingController(text: project.subdomain);
+    final service = ref.read(embeddedBackendProvider).liveUrls;
+    String? error;
+    bool saving = false;
+    await showDialog<void>(
+      context: context,
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, update) => AlertDialog(
+                  title: const Text('Edit subdomain'),
+                  content: TextField(
+                    controller: controller,
+                    enabled: !saving,
+                    onChanged:
+                        (value) =>
+                            update(() => error = validateSubdomain(value)),
+                    decoration: InputDecoration(
+                      suffixText: '.$baseDomain',
+                      errorText: error,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: saving ? null : () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed:
+                          saving
+                              ? null
+                              : () async {
+                                final name = controller.text;
+                                final validation = validateSubdomain(name);
+                                if (validation != null) {
+                                  update(() => error = validation);
+                                  return;
+                                }
+                                update(() {
+                                  saving = true;
+                                  error = null;
+                                });
+                                try {
+                                  await service.assign(
+                                    project.id,
+                                    custom: name,
+                                  );
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                } catch (e) {
+                                  if (ctx.mounted) {
+                                    update(() {
+                                      saving = false;
+                                      error = '$e';
+                                    });
+                                  }
+                                }
+                              },
+                      child: Text(saving ? 'Saving…' : 'Save'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+    controller.dispose();
+  }
+
+  Future<bool> _configureGateway() async {
+    final controller = TextEditingController();
+    final gateway = ref.read(embeddedBackendProvider).liveUrls.gateway;
+    String? error;
+    bool saving = false;
+    final saved = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(
+      builder: (ctx, update) => AlertDialog(
+        title: const Text('Connect buildiify-gateway'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Open your existing buildiify-gateway tunnel in Cloudflare and copy only its connector token from the install command. Enter it once here to run the tunnel on this phone.\n\nThe token is stored securely on this device. Wildcard DNS and ingress to localhost:8787 must be configured once. Do not enter your Cloudflare API token.'),
+          const SizedBox(height: 16),
+          TextField(controller: controller, obscureText: true, enableSuggestions: false,
+            autocorrect: false, enabled: !saving,
+            decoration: InputDecoration(labelText: 'Gateway connector token', errorText: error)),
+        ]),
+        actions: [
+          TextButton(onPressed: saving ? null : () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: saving ? null : () async {
+            update(() { saving = true; error = null; });
+            try {
+              await gateway.saveToken(controller.text);
+              controller.clear();
+              if (ctx.mounted) Navigator.pop(ctx, true);
+            } catch (e) {
+              if (ctx.mounted) update(() { saving = false; error = e is FormatException ? e.message : 'Could not securely save the token.'; });
+            }
+          }, child: Text(saving ? 'Saving…' : 'Save token')),
+        ],
+      ),
+    ));
+    controller.dispose();
+    return saved ?? false;
+  }
+
+  Future<void> _startProjectTunnel(BackendProject project) async {
+    if (_tunnelBusy) return;
+    setState(() => _tunnelBusy = true);
+    try {
+      final backend = ref.read(embeddedBackendProvider);
+      if (!await backend.liveUrls.gateway.configured && !await _configureGateway()) return;
+      if (!project.isLive) {
+        await backend.startSession(projectId: project.id);
+      } else {
+        await backend.liveUrls.startProjectTunnel(project.id);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally { if (mounted) setState(() => _tunnelBusy = false); }
   }
 
   @override
@@ -109,8 +238,7 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
     );
 
     final activeSession = backendState.activeSession;
-    final isSessionActive = activeSession != null && activeSession.projectId == project.id;
-    final liveUrl = isSessionActive ? activeSession.publicUrl : 'http://localhost:${project.port}';
+    final liveUrl = project.liveUrl;
 
     final logs = backendState.logs.where((l) => l.projectId == project.id).toList();
     final filteredLogs = logs.where((l) {
@@ -284,34 +412,82 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.white12),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: SelectableText(
-                            liveUrl,
-                            style: GoogleFonts.spaceMono(
-                              fontSize: 13,
-                              color: project.isLive ? const Color(0xFF34D399) : Colors.white70,
-                              fontWeight: FontWeight.w700,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed:
+                                    liveUrl.isEmpty
+                                        ? null
+                                        : () => _openUrl(liveUrl),
+                                child: Text(
+                                  liveUrl.isEmpty
+                                      ? 'No Live URL assigned'
+                                      : liveUrl,
+                                ),
+                              ),
                             ),
-                          ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 18),
+                              tooltip: 'Copy URL',
+                              onPressed:
+                                  liveUrl.isEmpty
+                                      ? null
+                                      : () {
+                                        Clipboard.setData(
+                                          ClipboardData(text: liveUrl),
+                                        );
+                                      },
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
-                          tooltip: 'Copy URL',
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: liveUrl));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('URL copied to clipboard!')),
-                            );
-                          },
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Chip(label: Text(project.liveUrlStatus)),
+                            TextButton.icon(
+                              onPressed: _tunnelBusy ? null : () => _startProjectTunnel(project),
+                              icon: const Icon(Icons.cloud_outlined, size: 18),
+                              label: Text(_tunnelBusy ? 'Connecting…' : 'Start Tunnel'),
+                            ),
+                            TextButton(onPressed: _tunnelBusy ? null : _configureGateway,
+                              child: const Text('Configure gateway')),
+                            if (project.liveUrlStatus == 'Provisioning')
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            if (liveUrl.isEmpty ||
+                                project.liveUrlStatus == 'Failed')
+                              TextButton(
+                                onPressed:
+                                    () => _urlAction(
+                                      () async {
+                                        if (liveUrl.isEmpty) { await backendNotifier.liveUrls.assign(project.id); }
+                                        else { await _startProjectTunnel(project); }
+                                      },
+                                    ),
+                                child: Text(
+                                  liveUrl.isEmpty ? 'Assign URL' : 'Retry',
+                                ),
+                              ),
+                            TextButton(
+                              onPressed: () => _editSubdomain(project),
+                              child: const Text('Edit subdomain'),
+                            ),
+                          ],
                         ),
-                        if (project.isLive)
-                          IconButton(
-                            icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF34D399)),
-                            tooltip: 'Open in Browser',
-                            onPressed: () => _openUrl(liveUrl),
-                          ),
+                        if (project.liveUrlStatus == 'Failed')
+                          Padding(padding: const EdgeInsets.only(top: 8), child: Text(
+                            backendNotifier.liveUrls.errorFor(project.id) ?? 'Start the gateway tunnel and verify wildcard DNS and ingress, then retry.',
+                            style: const TextStyle(color: Colors.orangeAccent, fontSize: 12),
+                          )),
                       ],
                     ),
                   ),
