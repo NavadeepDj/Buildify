@@ -9,9 +9,9 @@ import '../providers/ai_server_provider.dart';
 import '../backend/embedded_backend.dart';
 import '../services/guided_tour_service.dart';
 import '../widgets/guided_tour_overlay.dart';
+import 'deployment_page.dart';
 import 'host_project_wizard.dart';
 import 'service_detail_page.dart';
-import 'project_detail_page.dart';
 
 /// Projects dashboard — visual match for the buildify HTML mock.
 class ProjectsHomePage extends ConsumerStatefulWidget {
@@ -131,7 +131,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => ProjectDetailPage(projectId: p.id),
+              builder: (_) => DeploymentPage(projectId: p.id),
             ),
           );
         },
