@@ -31,6 +31,9 @@ secrets/
 # VS Code — uncomment to ignore local launch configs
 # .vscode/
 
+# Local AI agent files
+.agent
+
 # Flutter / Dart / Pub
 **/doc/api/
 **/ios/Flutter/.last_build_id
