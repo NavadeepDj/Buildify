@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/ai_model_select_page.dart';
@@ -7,6 +8,7 @@ import 'pages/hosted_account_page.dart';
 import 'pages/projects_home_page.dart';
 import 'pages/verification_page.dart';
 import 'screens/ai_server_shell.dart';
+import 'services/app_route_observer.dart';
 import 'theme/app_palette.dart';
 import 'providers/hosted_account_provider.dart';
 import 'providers/management_account_provider.dart';
@@ -17,6 +19,11 @@ import 'services/windows_app_storage.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
+  await GoogleFonts.pendingFonts([
+    GoogleFonts.spaceMono(),
+    GoogleFonts.spaceMono(fontWeight: FontWeight.w700),
+  ]);
   await configureWindowsAppStorage();
   SupabaseClient? client;
   HostedAuthConfig? authConfig;
@@ -112,6 +119,7 @@ class BuildifyApp extends ConsumerWidget {
         ),
       ),
       initialRoute: '/',
+      navigatorObservers: [appRouteObserver],
       onGenerateRoute: (settings) {
         final uri = Uri.tryParse(settings.name ?? '') ?? Uri();
         if (uri.path == '/verify') {
