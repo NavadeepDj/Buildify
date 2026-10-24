@@ -230,7 +230,6 @@ class _EnvManagementPageState extends ConsumerState<EnvManagementPage> {
         body: Column(
           children: [
             _TopBar(
-              userName: state.userName,
               onBack: () => Navigator.of(context).maybePop(),
               onSettings:
                   () => _showMessage(
@@ -369,22 +368,16 @@ class _EnvManagementPageState extends ConsumerState<EnvManagementPage> {
 // ==========================================
 class _TopBar extends StatelessWidget {
   const _TopBar({
-    required this.userName,
     required this.onBack,
     required this.onSettings,
   });
 
-  final String userName;
   final VoidCallback onBack;
   final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    final initial =
-        userName.trim().isEmpty
-            ? 'S'
-            : userName.trim().substring(0, 1).toUpperCase();
 
     return Container(
       padding: EdgeInsets.fromLTRB(4, top + 6, 16, 8),
@@ -426,25 +419,6 @@ class _TopBar extends StatelessWidget {
             tooltip: 'Environment info',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _EnvPalette.border,
-              shape: BoxShape.circle,
-              border: Border.all(color: _EnvPalette.borderStrong),
-            ),
-            child: Text(
-              initial,
-              style: GoogleFonts.spaceMono(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: _EnvPalette.softText,
-              ),
-            ),
           ),
         ],
       ),

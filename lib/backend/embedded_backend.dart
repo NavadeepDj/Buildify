@@ -756,6 +756,54 @@ class EmbeddedBackendService {
     );
   }
 
+  Future<void> updateProjectName(String projectId, String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      throw StateError('Project name is required');
+    }
+    final project = _state.projects.where((p) => p.id == projectId).firstOrNull;
+    if (project == null) {
+      throw StateError('Project not found: $projectId');
+    }
+    await DatabaseHelper.instance.updateProject(projectId, {
+      'name': trimmed,
+      'last_active_at': DateTime.now().millisecondsSinceEpoch,
+    });
+    _updateProject(projectId, (p) => p.copyWith(name: trimmed));
+    _log(
+      projectId,
+      _state.activeSession?.id ?? 'none',
+      '-- project renamed to $trimmed --',
+      BackendLogType.system,
+    );
+  }
+
+  Future<void> updateBuildConfig(
+    String projectId, {
+    String? branch,
+    String? baseDir,
+  }) async {
+    final project = _state.projects.where((p) => p.id == projectId).firstOrNull;
+    if (project == null) {
+      throw StateError('Project not found: $projectId');
+    }
+    await DatabaseHelper.instance.updateProject(projectId, {
+      'last_active_at': DateTime.now().millisecondsSinceEpoch,
+      if (branch != null) 'branch': branch,
+      if (baseDir != null) 'base_dir': baseDir,
+    });
+    _updateProject(
+      projectId,
+      (p) => p.copyWith(branch: branch, baseDir: baseDir),
+    );
+    _log(
+      projectId,
+      _state.activeSession?.id ?? 'none',
+      '-- build configuration updated --',
+      BackendLogType.system,
+    );
+  }
+
   Future<void> deleteProject(String id) async {
     final proj = _state.projects.where((p) => p.id == id).firstOrNull;
     if (proj == null) return;

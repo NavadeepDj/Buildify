@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../backend/embedded_backend.dart';
 import '../providers/ai_server_provider.dart';
 import '../services/guided_tour_service.dart';
+import '../widgets/buildify_logo.dart';
 import '../widgets/guided_tour_overlay.dart';
 import '../services/git_service.dart';
 import 'package:archive/archive_io.dart';
@@ -586,8 +587,7 @@ class _GithubOAuthSimulationPageState extends State<GithubOAuthSimulationPage> {
                             shape: BoxShape.circle,
                             color: Color(0xFF21262D),
                           ),
-                          child: const Icon(Icons.architecture,
-                              size: 32, color: Colors.white),
+                          child: const BuildifyLogo(size: 32),
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16),

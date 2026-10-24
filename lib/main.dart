@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'pages/ai_model_select_page.dart';
 import 'pages/auth_page.dart';
 import 'pages/projects_home_page.dart';
 import 'pages/verification_page.dart';
+import 'services/app_route_observer.dart';
 import 'theme/app_palette.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
+  await GoogleFonts.pendingFonts([
+    GoogleFonts.spaceMono(),
+    GoogleFonts.spaceMono(fontWeight: FontWeight.w700),
+  ]);
   runApp(const ProviderScope(child: BuildifyApp()));
 }
 
@@ -53,6 +61,7 @@ class BuildifyApp extends ConsumerWidget {
         ),
       ),
       initialRoute: '/',
+      navigatorObservers: [appRouteObserver],
       onGenerateRoute: (settings) {
         final uri = Uri.tryParse(settings.name ?? '') ?? Uri();
         if (uri.path == '/verify') {
@@ -64,13 +73,15 @@ class BuildifyApp extends ConsumerWidget {
         }
         if (uri.path == '/projects') {
           return MaterialPageRoute<void>(
-            builder: (ctx) => ProjectsHomePage(
-              onRunAiModel: () => Navigator.of(ctx).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AiModelSelectPage(),
+            builder:
+                (ctx) => ProjectsHomePage(
+                  onRunAiModel:
+                      () => Navigator.of(ctx).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AiModelSelectPage(),
+                        ),
+                      ),
                 ),
-              ),
-            ),
             settings: settings,
           );
         }
