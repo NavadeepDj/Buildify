@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'pages/ai_model_select_page.dart';
 import 'pages/auth_page.dart';
 import 'pages/projects_home_page.dart';
+import 'pages/verification_page.dart';
 import 'services/app_route_observer.dart';
 import 'theme/app_palette.dart';
 
@@ -61,17 +62,33 @@ class BuildifyApp extends ConsumerWidget {
       ),
       initialRoute: '/',
       navigatorObservers: [appRouteObserver],
-      routes: {
-        '/': (_) => const AuthPage(),
-        '/projects':
-            (context) => ProjectsHomePage(
-              onRunAiModel:
-                  () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AiModelSelectPage(),
-                    ),
-                  ),
-            ),
+      onGenerateRoute: (settings) {
+        final uri = Uri.tryParse(settings.name ?? '') ?? Uri();
+        if (uri.path == '/verify') {
+          final token = uri.queryParameters['token'];
+          return MaterialPageRoute<void>(
+            builder: (_) => VerificationPage(initialToken: token),
+            settings: settings,
+          );
+        }
+        if (uri.path == '/projects') {
+          return MaterialPageRoute<void>(
+            builder:
+                (ctx) => ProjectsHomePage(
+                  onRunAiModel:
+                      () => Navigator.of(ctx).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AiModelSelectPage(),
+                        ),
+                      ),
+                ),
+            settings: settings,
+          );
+        }
+        return MaterialPageRoute<void>(
+          builder: (_) => const AuthPage(),
+          settings: settings,
+        );
       },
     );
   }
