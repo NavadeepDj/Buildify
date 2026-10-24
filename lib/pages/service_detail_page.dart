@@ -8,9 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/ai_server_models.dart';
 import '../providers/ai_server_provider.dart';
-import '../screens/model_store_screen.dart';
-import '../screens/self_test_screen.dart';
 import '../services/subdomain.dart';
+import '../widgets/buildify_logo.dart';
 
 /// Project service detail — matches the Project---X HTML screen.
 class ServiceDetailPage extends ConsumerStatefulWidget {
@@ -28,6 +27,7 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
   int _lastLogCount = 0;
   bool _logsFullscreen = false;
   bool _showCustomRange = false;
+  bool _deleting = false;
   String _timeRange = 'last hour';
   // No hardcoded external IDs — identifiers are derived from runtime state.
 
@@ -179,6 +179,126 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
     }
   }
 
+  Future<void> _deleteModel(ModelProfile model) async {
+    var canDelete = false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, update) => AlertDialog(
+                  backgroundColor: _DetailPalette.surfaceContainer,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: const BorderSide(
+                      color: _DetailPalette.outlineVariant,
+                    ),
+                  ),
+                  title: Text(
+                    'Delete ${model.name}?',
+                    style: GoogleFonts.spaceMono(
+                      color: _DetailPalette.error,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'This permanently removes the model weights from this device. The AI server will be stopped before the model is deleted.',
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 12,
+                          height: 1.5,
+                          color: _DetailPalette.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(text: 'Type '),
+                            TextSpan(
+                              text: model.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: _DetailPalette.primary,
+                              ),
+                            ),
+                            const TextSpan(text: ' to confirm.'),
+                          ],
+                        ),
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 11,
+                          color: _DetailPalette.outline,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        autofocus: true,
+                        style: GoogleFonts.spaceMono(
+                          color: _DetailPalette.onSurface,
+                        ),
+                        onChanged:
+                            (value) => update(
+                              () => canDelete = value.trim() == model.name,
+                            ),
+                        decoration: InputDecoration(
+                          hintText: model.name,
+                          hintStyle: GoogleFonts.spaceMono(
+                            color: _DetailPalette.outline,
+                          ),
+                          filled: true,
+                          fillColor: _DetailPalette.surfaceContainerLow,
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: _DetailPalette.outlineVariant,
+                            ),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: _DetailPalette.error,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    _DetailDialogAction(
+                      label: 'CANCEL',
+                      onTap: () => Navigator.pop(ctx, false),
+                    ),
+                    _DetailDialogAction(
+                      label: 'DELETE',
+                      destructive: true,
+                      onTap: canDelete ? () => Navigator.pop(ctx, true) : null,
+                    ),
+                  ],
+                ),
+          ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    final notifier = ref.read(aiServerProvider.notifier);
+    try {
+      if (ref.read(aiServerProvider).status != ServerStatus.stopped) {
+        await notifier.stopServer();
+      }
+      await notifier.deleteModel(model.id);
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete model: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(aiServerProvider);
@@ -234,7 +354,14 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
               SafeArea(
                 child: Column(
                   children: [
-                    _DetailTopBar(horizontalPadding: horizontalPadding),
+                    _DetailTopBar(
+                      horizontalPadding: horizontalPadding,
+                      deleting: _deleting,
+                      onDelete:
+                          model.id.isEmpty || _deleting
+                              ? null
+                              : () => unawaited(_deleteModel(model)),
+                    ),
                     Expanded(
                       child: ColoredBox(
                         color: _DetailPalette.background,
@@ -501,10 +628,13 @@ class _DetailPalette {
   static const onSurface = Color(0xFFE5E2E0);
   static const onSurfaceVariant = Color(0xFFC4C7C8);
   static const onPrimary = Color(0xFF2F3131);
+  static const outline = Color(0xFF8E9192);
   static const outlineVariant = Color(0xFF444748);
   static const surfaceContainer = Color(0xFF20201E);
   static const surfaceContainerLow = Color(0xFF1C1C1A);
   static const surfaceContainerLowest = Color(0xFF0E0E0D);
+  static const error = Color(0xFFFFB4AB);
+  static const errorRed = Color(0xFFAF1D27);
   static const successGreen = Color(0xFF10B981);
   static const statusSuspended = Color(0xFF897671);
   static const terminalBg = Color(0xFF0E0E0D);
@@ -570,9 +700,15 @@ class _MeshBackground extends StatelessWidget {
 }
 
 class _DetailTopBar extends StatelessWidget {
-  const _DetailTopBar({required this.horizontalPadding});
+  const _DetailTopBar({
+    required this.horizontalPadding,
+    required this.deleting,
+    required this.onDelete,
+  });
 
   final double horizontalPadding;
+  final bool deleting;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -617,11 +753,7 @@ class _DetailTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Icon(
-            Icons.architecture,
-            color: _DetailPalette.primary,
-            size: 28,
-          ),
+          const BuildifyLogo(),
           const SizedBox(width: 8),
           Text(
             'buildify',
@@ -634,33 +766,73 @@ class _DetailTopBar extends StatelessWidget {
           ),
           const Spacer(),
           IconButton(
-            tooltip: 'Model Store',
-            onPressed:
-                () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ModelStoreScreen(),
-                  ),
-                ),
-            icon: const Icon(
-              Icons.storefront_outlined,
-              color: _DetailPalette.onSurface,
-            ),
-          ),
-          IconButton(
-            tooltip: 'Self-Test Diagnostics',
-            onPressed:
-                () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SelfTestScreen(),
-                  ),
-                ),
-            icon: const Icon(
-              Icons.biotech_outlined,
-              color: _DetailPalette.onSurface,
-            ),
+            tooltip: 'Delete model',
+            onPressed: onDelete,
+            icon:
+                deleting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _DetailPalette.onSurfaceVariant,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.delete_forever_outlined,
+                        color: _DetailPalette.onSurface,
+                      ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DetailDialogAction extends StatelessWidget {
+  const _DetailDialogAction({
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground =
+        destructive
+            ? _DetailPalette.error
+            : _DetailPalette.onSurfaceVariant;
+
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        backgroundColor:
+            destructive
+                ? _DetailPalette.errorRed.withValues(alpha: 0.2)
+                : Colors.transparent,
+        foregroundColor: foreground,
+        disabledForegroundColor: foreground.withValues(alpha: 0.4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side:
+              destructive
+                  ? BorderSide.none
+                  : const BorderSide(color: _DetailPalette.outlineVariant),
+        ),
+        textStyle: GoogleFonts.spaceMono(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1,
+        ),
+      ),
+      child: Text(label),
     );
   }
 }

@@ -10,8 +10,10 @@ import '../backend/embedded_backend.dart';
 import '../providers/ai_server_provider.dart';
 import '../services/guided_tour_service.dart';
 import '../services/subdomain.dart';
+import '../widgets/buildify_logo.dart';
 import '../widgets/guided_tour_overlay.dart';
 import 'env_management_page.dart';
+import 'settings.dart';
 
 // ==========================================
 // PALETTE — MATCHING service_detail_page.dart
@@ -364,11 +366,20 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                     children: [
                       _DetailTopBar(
                         horizontalPadding: horizontalPadding,
-                        onOpenSettings:
+                        onOpenEnvironment:
                             () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
                                 builder:
                                     (_) => EnvManagementPage(
+                                      projectId: project.id,
+                                    ),
+                              ),
+                            ),
+                        onOpenSettings:
+                            () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder:
+                                    (_) => SettingsPage(
                                       projectId: project.id,
                                     ),
                               ),
@@ -551,10 +562,12 @@ class _MeshBackground extends StatelessWidget {
 class _DetailTopBar extends StatelessWidget {
   const _DetailTopBar({
     required this.horizontalPadding,
+    required this.onOpenEnvironment,
     required this.onOpenSettings,
   });
 
   final double horizontalPadding;
+  final VoidCallback onOpenEnvironment;
   final VoidCallback onOpenSettings;
 
   @override
@@ -600,11 +613,7 @@ class _DetailTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Icon(
-            Icons.architecture,
-            color: _DetailPalette.primary,
-            size: 28,
-          ),
+          const BuildifyLogo(),
           const SizedBox(width: 8),
           Text(
             'buildify',
@@ -616,13 +625,10 @@ class _DetailTopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          IconButton(
-            tooltip: 'Project Settings',
-            onPressed: onOpenSettings,
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: _DetailPalette.onSurface,
-            ),
+          ProjectSettingsMenuButton(
+            onOpenEnvironment: onOpenEnvironment,
+            onOpenSettings: onOpenSettings,
+            iconColor: _DetailPalette.onSurface,
           ),
         ],
       ),
