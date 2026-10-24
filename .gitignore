@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+*.pptx
 .DS_Store
 .atom/
 .build/
@@ -29,6 +30,9 @@ secrets/
 
 # VS Code — uncomment to ignore local launch configs
 # .vscode/
+
+# Local AI agent files
+.agent
 
 # Flutter / Dart / Pub
 **/doc/api/
@@ -58,6 +62,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 **/local.properties
+.kotlin/
 
 # iOS
 **/ios/Pods/
@@ -93,6 +98,7 @@ demo-video/
 
 # Marketing site (website/) — Node-side ignores
 website/node_modules
+scripts/node_modules/
 website/.next
 website/.vercel
 website/.data

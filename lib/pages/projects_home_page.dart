@@ -9,9 +9,9 @@ import '../providers/ai_server_provider.dart';
 import '../backend/embedded_backend.dart';
 import '../services/guided_tour_service.dart';
 import '../widgets/guided_tour_overlay.dart';
+import 'deployment_page.dart';
 import 'host_project_wizard.dart';
 import 'service_detail_page.dart';
-import 'project_detail_page.dart';
 
 /// Projects dashboard — visual match for the buildify HTML mock.
 class ProjectsHomePage extends ConsumerStatefulWidget {
@@ -45,53 +45,60 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
     final isRunning = state.status == ServerStatus.running;
     final isStarting = state.status == ServerStatus.starting;
 
-    final selectedModel = state.models.firstWhere(
-      (m) => m.id == state.selectedModelId,
-      orElse: () => state.models.isNotEmpty
-          ? state.models.first
-          : const ModelProfile(
-              id: 'llama-3-8b',
-              name: 'Llama 3 8B',
-              fileName: 'llama-3-8b.gguf',
-              downloadUrl: '',
-              sizeLabel: '4.7 GB',
-              speed: 'Fast',
-              quality: 'High',
-              requiredRamGb: 6,
-              description: 'Llama 3 model',
-            ),
-    );
+    final List<_ServiceData> services = [];
 
-    final aiCard = _ServiceData(
-      name: 'project---x',
-      statusIcon: isRunning
-          ? Icons.check_circle_outline
-          : (isStarting ? Icons.sync : Icons.offline_bolt_outlined),
-      statusIconColor: isRunning
-          ? const Color(0xFF10B981)
-          : (isStarting ? const Color(0xFFF59E0B) : const Color(0xFF9CA3AF)),
-      statusLabel: isRunning ? 'online' : (isStarting ? 'starting' : 'offline'),
-      statusColor: isRunning
-          ? const Color(0xFF065F46)
-          : (isStarting ? const Color(0xFF78350F) : const Color(0xFF374151)),
-      version: selectedModel.name.toLowerCase(),
-      runtime: 'llama.cpp',
-      region: 'localhost:${state.port}',
-      updated: isRunning ? 'active' : 'stopped',
-      actionLabel: isRunning
-          ? 'active (tap to manage)'
-          : 'start server (tap to manage)',
-      actionIcon: isRunning ? Icons.insights_outlined : Icons.play_arrow,
-      actionPrimary: !isRunning,
-      metadataBorderBright: isRunning,
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const ServiceDetailPage(),
-          ),
-        );
-      },
-    );
+    // Only show an AI model server card if the user has actually started/run an AI server
+    if (isRunning || isStarting) {
+      final selectedModel = state.models.firstWhere(
+        (m) => m.id == state.selectedModelId,
+        orElse: () => state.models.isNotEmpty
+            ? state.models.first
+            : const ModelProfile(
+                id: 'llama-3-8b',
+                name: 'Llama 3 8B',
+                fileName: 'llama-3-8b.gguf',
+                downloadUrl: '',
+                sizeLabel: '4.7 GB',
+                speed: 'Fast',
+                quality: 'High',
+                requiredRamGb: 6,
+                description: 'Llama 3 model',
+              ),
+      );
+
+      final aiCard = _ServiceData(
+        name: '${selectedModel.name.toLowerCase()}-server',
+        statusIcon: isRunning
+            ? Icons.check_circle_outline
+            : (isStarting ? Icons.sync : Icons.offline_bolt_outlined),
+        statusIconColor: isRunning
+            ? const Color(0xFF10B981)
+            : (isStarting ? const Color(0xFFF59E0B) : const Color(0xFF9CA3AF)),
+        statusLabel: isRunning ? 'online' : (isStarting ? 'starting' : 'offline'),
+        statusColor: isRunning
+            ? const Color(0xFF065F46)
+            : (isStarting ? const Color(0xFF78350F) : const Color(0xFF374151)),
+        version: selectedModel.name.toLowerCase(),
+        runtime: 'llama.cpp',
+        region: 'localhost:${state.port}',
+        updated: isRunning ? 'active' : 'stopped',
+        actionLabel: isRunning
+            ? 'active (tap to manage)'
+            : 'start server (tap to manage)',
+        actionIcon: isRunning ? Icons.insights_outlined : Icons.play_arrow,
+        actionPrimary: !isRunning,
+        metadataBorderBright: isRunning,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ServiceDetailPage(),
+            ),
+          );
+        },
+      );
+      services.add(aiCard);
+    }
+
     final activeSession = ref.watch(backendStateProvider).value?.activeSession;
 
     final customCards = customProjects.map((p) {
@@ -124,7 +131,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => ProjectDetailPage(projectId: p.id),
+              builder: (_) => DeploymentPage(projectId: p.id),
             ),
           );
         },
@@ -139,7 +146,8 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
       );
     }).toList();
 
-    return [aiCard, ...customCards];
+    services.addAll(customCards);
+    return services;
   }
 
   @override
@@ -665,17 +673,69 @@ class _EnvironmentSection extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         if (expanded) ...[
-          ...services.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final s = entry.value;
-            return Padding(
+          if (services.isEmpty)
+            Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: _ServiceCard(
-                key: idx == 0 ? firstCardKey : null,
-                data: s,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: _ProjectsPalette.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.folder_open_outlined,
+                        size: 36,
+                        color: _ProjectsPalette.primary.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'no projects',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: _ProjectsPalette.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No projects or active AI models found.\nTap "+ Add New" below to host a project or run an AI model.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 12,
+                        color: _ProjectsPalette.onSurfaceVariant.withValues(alpha: 0.6),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          }),
+            )
+          else
+            ...services.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final s = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _ServiceCard(
+                  key: idx == 0 ? firstCardKey : null,
+                  data: s,
+                ),
+              );
+            }),
           _NewServiceButton(
             key: newServiceKey,
             onPressed: onNewService,

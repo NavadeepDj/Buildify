@@ -20,7 +20,7 @@ abstract class ServerBridge {
   Future<String?> getLocalIp();
   Future<String?> getTailscaleIp();
   Future<Map<String, dynamic>?> getDeviceMetrics();
-  Future<NativeTunnelResponse> startTunnel({required int port, String? tunnelUrl});
+  Future<NativeTunnelResponse> startTunnel({required int port, String? tunnelUrl, String? tunnelToken});
   Future<NativeTunnelResponse> stopTunnel();
   Future<NativeTunnelStatus?> getTunnelStatus();
 }
@@ -128,6 +128,7 @@ class NativeServerBridge implements ServerBridge {
   Future<NativeTunnelResponse> startTunnel({
     required int port,
     String? tunnelUrl,
+    String? tunnelToken,
   }) async {
     try {
       final raw = await _channel.invokeMapMethod<String, dynamic>(
@@ -135,6 +136,7 @@ class NativeServerBridge implements ServerBridge {
         <String, dynamic>{
           'port': port,
           if (tunnelUrl != null) 'tunnelUrl': tunnelUrl,
+          if (tunnelToken != null) 'tunnelToken': tunnelToken,
         },
       );
       return NativeTunnelResponse.fromMap(raw);
@@ -246,18 +248,21 @@ class NativeTunnelResponse {
 
 class NativeTunnelStatus {
   const NativeTunnelStatus({
+    this.isGateway = false,
     required this.status,
     this.publicUrl,
     this.lastError,
   });
 
   final String status;
+  final bool isGateway;
   final String? publicUrl;
   final String? lastError;
 
   factory NativeTunnelStatus.fromMap(Map<String, dynamic> data) {
     return NativeTunnelStatus(
       status: data['status'] as String? ?? 'stopped',
+      isGateway: data['isGateway'] as bool? ?? false,
       publicUrl: data['publicUrl'] as String?,
       lastError: data['lastError'] as String?,
     );
