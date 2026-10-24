@@ -8,11 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../backend/embedded_backend.dart';
 import '../providers/ai_server_provider.dart';
-import '../screens/model_store_screen.dart';
-import '../screens/self_test_screen.dart';
 import '../services/guided_tour_service.dart';
 import '../services/subdomain.dart';
 import '../widgets/guided_tour_overlay.dart';
+import 'env_management_page.dart';
 
 // ==========================================
 // PALETTE — MATCHING service_detail_page.dart
@@ -365,52 +364,15 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                     children: [
                       _DetailTopBar(
                         horizontalPadding: horizontalPadding,
-                        onDeleteProject: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              backgroundColor: _DetailPalette.surfaceContainer,
-                              shape: const RoundedRectangleBorder(
-                                side: BorderSide(color: _DetailPalette.outlineVariant),
+                        onOpenSettings:
+                            () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder:
+                                    (_) => EnvManagementPage(
+                                      projectId: project.id,
+                                    ),
                               ),
-                              title: Text(
-                                'Delete ${project.name}?',
-                                style: GoogleFonts.spaceMono(
-                                  color: _DetailPalette.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              content: Text(
-                                'Are you sure you want to permanently delete this project?',
-                                style: GoogleFonts.spaceMono(
-                                  color: _DetailPalette.onSurfaceVariant,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              actions: [
-                                _OutlineButton(
-                                  label: 'CANCEL',
-                                  onTap: () => Navigator.pop(ctx, false),
-                                ),
-                                const SizedBox(width: 8),
-                                _PrimaryButton(
-                                  label: 'DELETE',
-                                  icon: Icons.delete_outline,
-                                  backgroundColor: Colors.redAccent,
-                                  foregroundColor: Colors.white,
-                                  onTap: () => Navigator.pop(ctx, true),
-                                ),
-                              ],
                             ),
-                          );
-
-                          if (confirm == true) {
-                            await backendNotifier.deleteProject(project.id);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
-                          }
-                        },
                       ),
                       Expanded(
                         child: ColoredBox(
@@ -461,7 +423,21 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                               ),
                               const SizedBox(height: 48),
 
-                              // 3. System Status
+                              // 3. Environment Variables
+                              _EnvVariablesSection(
+                                envVars: project.envVars,
+                                onManage: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder:
+                                        (_) => EnvManagementPage(
+                                          projectId: project.id,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 48),
+
+                              // 4. System Status
                               _SystemStatusSection(
                                 key: _configKey,
                                 deviceLabel: device.cpuLabel.isNotEmpty ? device.cpuLabel : 'IQOO 9se',
@@ -475,7 +451,7 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                               ),
                               const SizedBox(height: 48),
 
-                              // 4. Active Runtime Status
+                              // 5. Active Runtime Status
                               _ActiveRuntimeSection(
                                 projectName: project.name,
                                 isRunning: isRunning,
@@ -484,7 +460,7 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                               ),
                               const SizedBox(height: 48),
 
-                              // 5. Runtime Logs Terminal
+                              // 6. Runtime Logs Terminal
                               _RuntimeLogsSection(
                                 key: _logsKey,
                                 logs: logs,
@@ -575,11 +551,11 @@ class _MeshBackground extends StatelessWidget {
 class _DetailTopBar extends StatelessWidget {
   const _DetailTopBar({
     required this.horizontalPadding,
-    this.onDeleteProject,
+    required this.onOpenSettings,
   });
 
   final double horizontalPadding;
-  final VoidCallback? onDeleteProject;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -641,40 +617,13 @@ class _DetailTopBar extends StatelessWidget {
           ),
           const Spacer(),
           IconButton(
-            tooltip: 'Model Store',
-            onPressed:
-                () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ModelStoreScreen(),
-                  ),
-                ),
+            tooltip: 'Project Settings',
+            onPressed: onOpenSettings,
             icon: const Icon(
-              Icons.storefront_outlined,
+              Icons.settings_outlined,
               color: _DetailPalette.onSurface,
             ),
           ),
-          IconButton(
-            tooltip: 'Self-Test Diagnostics',
-            onPressed:
-                () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SelfTestScreen(),
-                  ),
-                ),
-            icon: const Icon(
-              Icons.biotech_outlined,
-              color: _DetailPalette.onSurface,
-            ),
-          ),
-          if (onDeleteProject != null)
-            IconButton(
-              tooltip: 'Delete Project',
-              onPressed: onDeleteProject,
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-              ),
-            ),
         ],
       ),
     );
@@ -1039,6 +988,187 @@ class _MetaCell extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// ENVIRONMENT VARIABLES SECTION
+// ==========================================
+class _EnvVariablesSection extends StatelessWidget {
+  const _EnvVariablesSection({required this.envVars, required this.onManage});
+
+  final Map<String, String> envVars;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = envVars.keys.toList()..sort();
+    const previewLimit = 8;
+    final preview = keys.take(previewLimit).toList();
+    final overflow = keys.length - preview.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const _SectionLabel('environment'),
+            const Spacer(),
+            _OutlineButton(
+              label: 'MANAGE',
+              trailing: Icons.arrow_forward,
+              onTap: onManage,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: _DetailPalette.background,
+            border: Border.all(
+              color: _DetailPalette.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _DetailPalette.surfaceContainerLow.withValues(
+                    alpha: 0.5,
+                  ),
+                  border: const Border(
+                    bottom: BorderSide(color: _DetailPalette.outlineVariant),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.password_outlined,
+                      size: 16,
+                      color: _DetailPalette.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'environment variables',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        color: _DetailPalette.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${keys.length} configured',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 8,
+                        letterSpacing: 0.8,
+                        color: _DetailPalette.onSurfaceVariant.withValues(
+                          alpha: 0.6,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child:
+                    keys.isEmpty
+                        ? InkWell(
+                          onTap: onManage,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.add,
+                                  size: 14,
+                                  color: _DetailPalette.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'no variables configured — add secrets and config values for this project',
+                                    style: GoogleFonts.spaceMono(
+                                      fontSize: 10,
+                                      height: 1.5,
+                                      color: _DetailPalette.onSurfaceVariant
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        : Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            for (final key in preview)
+                              _EnvKeyChip(keyName: key),
+                            if (overflow > 0)
+                              Text(
+                                '+$overflow more',
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 9,
+                                  color: _DetailPalette.onSurfaceVariant
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                          ],
+                        ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EnvKeyChip extends StatelessWidget {
+  const _EnvKeyChip({required this.keyName});
+
+  final String keyName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _DetailPalette.surfaceContainerLowest,
+        border: Border.all(
+          color: _DetailPalette.outlineVariant.withValues(alpha: 0.5),
+        ),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            keyName,
+            style: GoogleFonts.spaceMono(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: _DetailPalette.onSurface,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '••••••',
+            style: GoogleFonts.spaceMono(
+              fontSize: 8,
+              letterSpacing: 1,
+              color: _DetailPalette.onSurfaceVariant.withValues(alpha: 0.4),
+            ),
+          ),
         ],
       ),
     );

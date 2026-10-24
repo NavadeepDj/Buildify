@@ -732,6 +732,30 @@ class EmbeddedBackendService {
     }
   }
 
+  Future<void> updateEnvVars(
+    String projectId,
+    Map<String, String> envVars,
+  ) async {
+    final project = _state.projects.where((p) => p.id == projectId).firstOrNull;
+    if (project == null) {
+      throw StateError('Project not found: $projectId');
+    }
+    await DatabaseHelper.instance.updateProject(projectId, {
+      'env_vars': jsonEncode(envVars),
+      'last_active_at': DateTime.now().millisecondsSinceEpoch,
+    });
+    _updateProject(
+      projectId,
+      (p) => p.copyWith(envVars: Map<String, String>.from(envVars)),
+    );
+    _log(
+      projectId,
+      _state.activeSession?.id ?? 'none',
+      '-- environment variables updated (${envVars.length}) --',
+      BackendLogType.system,
+    );
+  }
+
   Future<void> deleteProject(String id) async {
     final proj = _state.projects.where((p) => p.id == id).firstOrNull;
     if (proj == null) return;
