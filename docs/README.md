@@ -1,5 +1,13 @@
 # Buildify documentation
 
+[HostAny delivery tracks](hostany-delivery-tracks.md) maps epic #75 to Navadeep,
+Sujith, and Harita, including issue ownership, dependencies, and file handoffs.
+
+For the planned shared-account backend, start with
+[ADR 0001: Shared accounts and SaaS management](decisions/0001-shared-accounts-and-management.md).
+It covers Supabase Auth/PostgreSQL, SQL migrations without a new ORM, device
+ownership, remote commands, subscriptions, domain routing, and release blockers.
+
 Index of guides for **Buildify AI Server** (Flutter Android → local LLM HTTP server).
 
 | Doc | What it covers |

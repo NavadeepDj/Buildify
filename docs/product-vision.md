@@ -1,5 +1,14 @@
 # Product vision and constraints
 
+## Shared services direction
+
+The local compute goal remains: project servers and model inference run on the
+user's device. Planned shared accounts, remote management, and paid branded URLs
+are defined in [ADR 0001](decisions/0001-shared-accounts-and-management.md).
+The target local/LAN core remains usable without a paid plan or cloud login;
+cloud enrollment and entitlements govern platform-managed remote services.
+These are target boundaries, not claims that the SaaS features are shipped.
+
 ## Goal
 
 Let **non-developers** install an app, **download an open model**, tap **Start**, and have a **local AI HTTP server** on their Wi‑Fi — **no paid cloud inference** for the core experience.

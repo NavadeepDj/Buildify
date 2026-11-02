@@ -1,5 +1,14 @@
 # Architecture
 
+## Shared account and SaaS direction
+
+[ADR 0001: Shared accounts and SaaS management](decisions/0001-shared-accounts-and-management.md)
+defines the target cloud identity, database, API, device-agent, subscription, and
+hostname boundaries tracked in [epic #75](https://github.com/NavadeepDj/Buildify/issues/75).
+It distinguishes planned behavior from the local runtime described below. Local
+project files and AI inference stay on hosting devices; shared identity does not
+move compute to Supabase.
+
 Buildify turns an Android phone into a **small HTTP server** that runs a **GGUF** model locally. Other devices on the same Wi‑Fi call it like a mini "Ollama on a phone." An optional **Cloudflare Tunnel** exposes the server to the internet via a public HTTPS URL. **Tailscale** provides a private mesh VPN so tailnet devices can reach the server.
 
 ## High-level flow
