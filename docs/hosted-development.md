@@ -93,12 +93,44 @@ app link; leave additional redirect URLs narrowly allowlisted for future work.
 Configure Custom SMTP with a real transactional sender and verified sender
 domain, including the DNS records required by that provider. Enter credentials
 only in Supabase's SMTP configuration. Default Supabase email delivery is limited
-to pre-authorized team addresses and is not a general-user delivery service.
+to pre-authorized team addresses and is not a general-user delivery service. Resend
+delivers these Supabase-generated messages (`notifications@hostany.app`). Editing a
+Resend marketing template will not update this auth email; no Cloudflare/DNS or
+SMTP-credential changes are needed for this design task.
 
-Under Authentication email templates, replace the **Confirm signup** body with
-`supabase/templates/confirmation.html`. It includes `{{ .Token }}` so users can
-enter a code on either device. Preserve the template expression exactly. Codes
-are verified through Supabase Auth; Buildify does not generate/store local codes.
+### Template and Personalization Behavior
+The source of truth for the signup confirmation email template is tracked in:
+`supabase/templates/confirmation.html`
+
+- **Approved Subject:** `Welcome to HostAny — confirm your email`
+- **Dynamic Token Source:** Uses `{{ .Token }}` exactly. Do not hardcode codes or assume a fixed digit count.
+- **In-App Flow:** Preserves the code-entry in app flow without requiring deep links or external callbacks.
+- **Metadata Personalization:** Supabase templates expose user metadata through `{{ .Data }}`.
+  Signup sends `data: {'display_name': name.trim()}` via `lib/services/hosted_account_service.dart`.
+  The template uses safe fallback greeting logic:
+  ```gotemplate
+  {{ if .Data.display_name }}Hi {{ .Data.display_name }},{{ else }}Welcome to HostAny!{{ end }}
+  ```
+- **Safety & Untrusted Text:** Go's template engine HTML-escapes metadata automatically, preventing XSS. Long and non-Latin names are wrapped with `word-break: break-word` to ensure layouts do not break.
+
+### Deployment Instructions (Manual Dashboard Step)
+Editing the local HTML file alone does not update hosted Supabase. Deployment is a separate manual step:
+1. Open the [Supabase Dashboard](https://supabase.com/dashboard) and select the **DEVELOPMENT** project.
+2. Navigate to **Authentication** > **Email Templates** (or Email settings).
+3. Select the **Confirm signup** template tab.
+4. Set Subject to: `Welcome to HostAny — confirm your email`
+5. Paste the entire body from `supabase/templates/confirmation.html` into the Body editor.
+6. Save changes. Coordinate dashboard access and deployment with Navadeep rather than sharing administrator credentials.
+
+### Rollback Instructions
+If rollback is required, re-open the **Confirm signup** template in Supabase Dashboard and restore the previous minimal working body:
+```html
+<h2>Confirm your HostAny account</h2>
+<p>Return to HostAny and enter this verification code:</p>
+<p><strong>{{ .Token }}</strong></p>
+<p>This code expires according to the project's email verification settings. If you did not request this account, ignore this email.</p>
+```
+And reset the Subject to: `Confirm your HostAny account`.
 
 Do not disable confirmation to work around a missing email. If CAPTCHA is enabled,
 client CAPTCHA integration is required before this slice can be used; it is not
@@ -184,3 +216,4 @@ References: [Flutter signup](https://supabase.com/docs/reference/dart/auth-signu
 [email templates](https://supabase.com/docs/guides/auth/auth-email-templates),
 [SMTP](https://supabase.com/docs/guides/auth/auth-smtp),
 [environment workflow](https://supabase.com/docs/guides/deployment/managing-environments).
+
