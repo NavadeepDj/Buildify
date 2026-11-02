@@ -69,3 +69,17 @@ Example fields:
 | `predicted_per_second` | Decode throughput (tokens/sec, approximate) |
 
 Useful for tuning model size and expectations on phones.
+
+## Remote / Cloudflare Tunnel Testing
+
+To test the phone-hosted model from a laptop over the internet (without being on the same Wi-Fi), use a Cloudflare Tunnel:
+
+```bash
+cloudflared tunnel --url http://localhost:8080
+```
+
+This exposes your local server at a public `https://*.trycloudflare.com` URL. All the endpoints above (`/health`, `/v1/chat/completions`, `/completion`) work the same way over the tunnel URL.
+
+For a full step-by-step smoke-test runbook including environment setup, phases, result matrix, and failure paths, see:
+
+📄 [docs/testing/ai-tunnel-laptop-smoke-test.md](testing/ai-tunnel-laptop-smoke-test.md)
