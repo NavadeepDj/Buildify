@@ -1,5 +1,8 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/github_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
@@ -34,8 +37,7 @@ class HostProjectSourcePage extends ConsumerStatefulWidget {
       _HostProjectSourcePageState();
 }
 
-class _HostProjectSourcePageState
-    extends ConsumerState<HostProjectSourcePage> {
+class _HostProjectSourcePageState extends ConsumerState<HostProjectSourcePage> {
   bool _isHoveringGit = false;
   bool _extracting = false;
   final _gitRepoKey = GlobalKey();
@@ -47,6 +49,7 @@ class _HostProjectSourcePageState
     _urlController.dispose();
     super.dispose();
   }
+
   @override
   void initState() {
     super.initState();
@@ -55,7 +58,7 @@ class _HostProjectSourcePageState
         GuidedTourStep(
           title: 'Import Git Repository',
           description:
-              'Connect your GitHub account to import and auto-deploy your source code.',
+              'Connect your GitHub account to import your source code.',
           targetKey: _gitRepoKey,
           tooltipPosition: TooltipPosition.bottom,
         ),
@@ -92,7 +95,10 @@ class _HostProjectSourcePageState
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 580),
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 children: [
                   Text(
                     'Let\'s build something new.',
@@ -133,7 +139,7 @@ class _HostProjectSourcePageState
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const GithubOAuthSimulationPage(),
+                            builder: (context) => const GithubConnectPage(),
                           ),
                         );
                       },
@@ -143,16 +149,25 @@ class _HostProjectSourcePageState
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         decoration: BoxDecoration(
-                          color: _isHoveringGit ? _WizardPalette.hoverCard : Colors.transparent,
+                          color:
+                              _isHoveringGit
+                                  ? _WizardPalette.hoverCard
+                                  : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _isHoveringGit ? Colors.white54 : _WizardPalette.outline,
+                            color:
+                                _isHoveringGit
+                                    ? Colors.white54
+                                    : _WizardPalette.outline,
                           ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const _GitHubLogo(size: 20, color: _WizardPalette.primary),
+                            const _GitHubLogo(
+                              size: 20,
+                              color: _WizardPalette.primary,
+                            ),
                             const SizedBox(width: 12),
                             Text(
                               'GitHub',
@@ -170,7 +185,9 @@ class _HostProjectSourcePageState
                   const SizedBox(height: 24),
                   Row(
                     children: [
-                      const Expanded(child: Divider(color: _WizardPalette.outline)),
+                      const Expanded(
+                        child: Divider(color: _WizardPalette.outline),
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
@@ -181,7 +198,9 @@ class _HostProjectSourcePageState
                           ),
                         ),
                       ),
-                      const Expanded(child: Divider(color: _WizardPalette.outline)),
+                      const Expanded(
+                        child: Divider(color: _WizardPalette.outline),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -192,26 +211,46 @@ class _HostProjectSourcePageState
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: _WizardPalette.outline),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.link, color: _WizardPalette.textDim, size: 20),
+                        const Icon(
+                          Icons.link,
+                          color: _WizardPalette.textDim,
+                          size: 20,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: _urlController,
-                            style: GoogleFonts.spaceMono(fontSize: 14, color: _WizardPalette.primary),
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 14,
+                              color: _WizardPalette.primary,
+                            ),
                             decoration: InputDecoration(
                               hintText: 'https://github.com/owner/repo',
-                              hintStyle: GoogleFonts.spaceMono(color: _WizardPalette.textDim),
+                              hintStyle: GoogleFonts.spaceMono(
+                                color: _WizardPalette.textDim,
+                              ),
                               border: InputBorder.none,
                             ),
-                            onSubmitted: (val) => _handleUrlSubmit(val, context),
+                            onSubmitted:
+                                (val) => _handleUrlSubmit(val, context),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.arrow_forward, color: _WizardPalette.primary),
-                          onPressed: () => _handleUrlSubmit(_urlController.text, context),
+                          icon: const Icon(
+                            Icons.arrow_forward,
+                            color: _WizardPalette.primary,
+                          ),
+                          onPressed:
+                              () => _handleUrlSubmit(
+                                _urlController.text,
+                                context,
+                              ),
                         ),
                       ],
                     ),
@@ -238,7 +277,10 @@ class _HostProjectSourcePageState
                       dashSpace: 6,
                     ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 56,
+                        horizontal: 24,
+                      ),
                       alignment: Alignment.center,
                       child: Column(
                         children: [
@@ -247,7 +289,9 @@ class _HostProjectSourcePageState
                             textAlign: TextAlign.center,
                             style: GoogleFonts.spaceMono(
                               fontSize: 16,
-                              color: _WizardPalette.primary.withValues(alpha: 0.8),
+                              color: _WizardPalette.primary.withValues(
+                                alpha: 0.8,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -314,10 +358,11 @@ class _HostProjectSourcePageState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => HostProjectSettingsPage(
-          repoName: folderName.isNotEmpty ? folderName : 'local-project',
-          existingLocalPath: result,
-        ),
+        builder:
+            (context) => HostProjectSettingsPage(
+              repoName: folderName.isNotEmpty ? folderName : 'local-project',
+              existingLocalPath: result,
+            ),
       ),
     );
   }
@@ -335,23 +380,27 @@ class _HostProjectSourcePageState
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const PopScope(
-        canPop: false,
-        child: AlertDialog(
-          backgroundColor: Color(0xFF20201F),
-          content: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: Colors.white),
-                SizedBox(width: 20),
-                Text('Extracting zip…', style: TextStyle(color: Colors.white)),
-              ],
+      builder:
+          (_) => const PopScope(
+            canPop: false,
+            child: AlertDialog(
+              backgroundColor: Color(0xFF20201F),
+              content: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(width: 20),
+                    Text(
+                      'Extracting zip…',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
     );
 
     try {
@@ -377,18 +426,19 @@ class _HostProjectSourcePageState
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => HostProjectSettingsPage(
-            repoName: zipName.isEmpty ? 'local-project' : zipName,
-            existingLocalPath: localPath,
-          ),
+          builder:
+              (context) => HostProjectSettingsPage(
+                repoName: zipName.isEmpty ? 'local-project' : zipName,
+                existingLocalPath: localPath,
+              ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // dismiss loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to extract zip: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to extract zip: $e')));
     } finally {
       if (mounted) setState(() => _extracting = false);
     }
@@ -410,10 +460,9 @@ class _HostProjectSourcePageState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => HostProjectSettingsPage(
-          repoName: repoName,
-          repoUrl: url,
-        ),
+        builder:
+            (context) =>
+                HostProjectSettingsPage(repoName: repoName, repoUrl: url),
       ),
     );
   }
@@ -437,18 +486,19 @@ class _DashedBorderPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+    final paint =
+        Paint()
+          ..color = color
+          ..strokeWidth = 1.0
+          ..style = PaintingStyle.stroke;
 
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, size.width, size.height),
-          Radius.circular(radius),
-        ),
-      );
+    final path =
+        Path()..addRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(0, 0, size.width, size.height),
+            Radius.circular(radius),
+          ),
+        );
 
     final PathMetrics pathMetrics = path.computeMetrics();
     final Path dashedPath = Path();
@@ -481,7 +531,7 @@ class _DashedBorderPainter extends CustomPainter {
 // ==========================================
 class _GitHubLogo extends StatelessWidget {
   const _GitHubLogo({required this.size, required this.color});
-  
+
   final double size;
   final Color color;
 
@@ -497,473 +547,161 @@ class _GitHubLogo extends StatelessWidget {
 }
 
 // ==========================================
-// STEP 2 (SIMULATED): GitHub OAuth Login & Authorization
-// ==========================================
-class GithubOAuthSimulationPage extends StatefulWidget {
-  const GithubOAuthSimulationPage({super.key});
-
+// GitHub device authorization and repository loading.
+class GithubConnectPage extends StatefulWidget {
+  const GithubConnectPage({super.key});
   @override
-  State<GithubOAuthSimulationPage> createState() =>
-      _GithubOAuthSimulationPageState();
+  State<GithubConnectPage> createState() => _GithubConnectPageState();
 }
 
-class _GithubOAuthSimulationPageState extends State<GithubOAuthSimulationPage> {
-  bool _isAuthorizing = false;
-
-  void _handleAuthorize() {
-    setState(() {
-      _isAuthorizing = true;
-    });
-
-    // Simulate OAuth API Token Exchange delay
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const GithubAppInstallSimulationPage(),
-          ),
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0D1117), // GitHub Dark BG
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF161B22),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const _GitHubLogo(size: 24, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                'GitHub OAuth',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          centerTitle: true,
-        ),
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161B22),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF30363D)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Interlocking avatars
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFF21262D),
-                          ),
-                          child: const Icon(Icons.architecture,
-                              size: 32, color: Colors.white),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Icon(Icons.swap_horiz,
-                              color: Colors.green, size: 28),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFF21262D),
-                          ),
-                          child: const _GitHubLogo(size: 32, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Authorize Buildify',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Buildify by sujith8257 wants access to your GitHub account to import repositories and set up automated deployments.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 12,
-                        color: const Color(0xFF8B949E),
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Divider(color: Color(0xFF30363D)),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline,
-                            color: Colors.green, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Read access to public & private repositories',
-                            style: GoogleFonts.spaceMono(
-                                fontSize: 11, color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline,
-                            color: Colors.green, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Permission to configure webhooks for rebuilds',
-                            style: GoogleFonts.spaceMono(
-                                fontSize: 11, color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    if (_isAuthorizing)
-                      const Center(
-                        child: Column(
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.green),
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              'Exchanging authorization codes...',
-                              style: TextStyle(
-                                  color: Color(0xFF8B949E), fontSize: 11),
-                            )
-                          ],
-                        ),
-                      )
-                    else
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFFF0F6FC),
-                                side: const BorderSide(color: Color(0xFF30363D)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF238636),
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              onPressed: _handleAuthorize,
-                              child: const Text('Authorize'),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================
-// STEP 3 (SIMULATED): GitHub App Installation / Repo Access Setup
-// ==========================================
-class GithubAppInstallSimulationPage extends ConsumerStatefulWidget {
-  const GithubAppInstallSimulationPage({super.key});
-
-  @override
-  ConsumerState<GithubAppInstallSimulationPage> createState() =>
-      _GithubAppInstallSimulationPageState();
-}
-
-class _GithubAppInstallSimulationPageState
-    extends ConsumerState<GithubAppInstallSimulationPage> {
-  bool _allRepos = true;
-  final _repoChoiceKey = GlobalKey();
-  final _installKey = GlobalKey();
-  final List<String> _repos = const [
-    'Sujith8257/mass',
-    'Sujith8257/buildify',
-    'Sujith8257/portfolio-v2',
-    'Sujith8257/react-dashboard',
-    'Sujith8257/node-express-api',
-  ];
-  final Set<String> _selectedRepos = {};
+class _GithubConnectPageState extends State<GithubConnectPage> {
+  final _auth = GithubAuthService();
+  Map<String, dynamic>? _device;
+  String? _error;
+  bool _busy = false;
+  int _generation = 0;
 
   @override
   void initState() {
     super.initState();
-    _selectedRepos.addAll(_repos);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final steps = [
-        GuidedTourStep(
-          title: 'Repository Permissions',
-          description:
-              'Select whether Buildify can access all your repositories or specific ones.',
-          targetKey: _repoChoiceKey,
-          tooltipPosition: TooltipPosition.bottom,
-        ),
-        GuidedTourStep(
-          title: 'Install & Authorize',
-          description:
-              'Tap Install & Authorize to connect your selected repositories.',
-          targetKey: _installKey,
-          tooltipPosition: TooltipPosition.top,
-        ),
-      ];
-      ref.read(guidedTourNotifierProvider.notifier).startTour(steps);
-    });
-  }
-
-  void _toggleRepo(String repo) {
-    setState(() {
-      if (_selectedRepos.contains(repo)) {
-        _selectedRepos.remove(repo);
-      } else {
-        _selectedRepos.add(repo);
-      }
-    });
-  }
-
-  void _handleInstall() {
-    final finalRepos = _allRepos ? _repos : _selectedRepos.toList();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => HostProjectSelectPage(allowedRepos: finalRepos),
-      ),
-    );
+    _connect();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0D1117), // GitHub Dark BG
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
-      child: GuidedTourOverlay(
-        child: Scaffold(
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF161B22),
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              'Install Buildify App',
-              style: GoogleFonts.spaceMono(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+  void dispose() {
+    _generation++;
+    _auth.close();
+    super.dispose();
+  }
+
+  Future<void> _connect() async {
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _device = null;
+    });
+    try {
+      var token = await GithubAuthService.storage.read(
+        key: GithubAuthService.tokenKey,
+      );
+      if (!mounted || generation != _generation) return;
+      if (token == null) {
+        final device = await _auth.begin();
+        if (!mounted || generation != _generation) return;
+        setState(() => _device = device);
+        token = await _auth.poll(
+          device,
+          () => !mounted || generation != _generation,
+        );
+      }
+      if (token == null || !mounted) return;
+      final repos = await _auth.repositories(token);
+      if (!mounted || generation != _generation) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => HostProjectSelectPage(
+                allowedRepos:
+                    repos.map((r) => r['full_name'] as String).toList(),
+                defaultBranches: {
+                  for (final r in repos)
+                    r['full_name'] as String: r['default_branch'] as String,
+                },
               ),
+        ),
+      );
+    } catch (e) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = e.toString());
+      }
+    } finally {
+      if (mounted && generation == _generation) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Connect GitHub')),
+    body: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(24),
+          children: [
+            const Text(
+              'Sign in with GitHub to choose a repository.',
+              style: TextStyle(fontSize: 22),
             ),
-            centerTitle: true,
-          ),
-          body: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF161B22),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF30363D)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Configure Repository Access',
-                        style: GoogleFonts.spaceMono(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Choose which repositories Buildify has permission to see and deploy.',
-                        style: GoogleFonts.spaceMono(
-                          fontSize: 12,
-                          color: const Color(0xFF8B949E),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(color: Color(0xFF30363D)),
-                      const SizedBox(height: 12),
-
-                      Column(
-                        key: _repoChoiceKey,
-                        children: [
-                          RadioListTile<bool>(
-                            value: true,
-                            groupValue: _allRepos, // ignore: deprecated_member_use
-                            onChanged: (val) { // ignore: deprecated_member_use
-                              if (val != null) setState(() => _allRepos = val);
-                            },
-                            title: Text(
-                              'All repositories',
-                              style: GoogleFonts.spaceMono(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white),
-                            ),
-                            subtitle: Text(
-                              'Access all current and future repositories.',
-                              style: GoogleFonts.spaceMono(
-                                  fontSize: 11, color: const Color(0xFF8B949E)),
-                            ),
-                            activeColor: const Color(0xFF238636),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          RadioListTile<bool>(
-                            value: false,
-                            groupValue: _allRepos, // ignore: deprecated_member_use
-                            onChanged: (val) { // ignore: deprecated_member_use
-                              if (val != null) setState(() => _allRepos = val);
-                            },
-                            title: Text(
-                              'Only select repositories',
-                              style: GoogleFonts.spaceMono(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white),
-                            ),
-                            subtitle: Text(
-                              'Choose specific repositories to deploy.',
-                              style: GoogleFonts.spaceMono(
-                                  fontSize: 11, color: const Color(0xFF8B949E)),
-                            ),
-                            activeColor: const Color(0xFF238636),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ],
-                      ),
-
-                      if (!_allRepos) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 180),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFF30363D)),
-                            color: const Color(0xFF0D1117),
-                          ),
-                          child: ListView(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            children: _repos.map((repo) {
-                              final isChecked = _selectedRepos.contains(repo);
-                              return CheckboxListTile(
-                                value: isChecked,
-                                onChanged: (_) => _toggleRepo(repo),
-                                title: Text(
-                                  repo,
-                                  style: GoogleFonts.spaceMono(
-                                      fontSize: 12, color: Colors.white),
-                                ),
-                                activeColor: const Color(0xFF238636),
-                                controlAffinity: ListTileControlAffinity.leading,
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 32),
-                      ElevatedButton(
-                        key: _installKey,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF238636),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        onPressed: !_allRepos && _selectedRepos.isEmpty
-                            ? null
-                            : _handleInstall,
-                        child: Text(
-                          'Install & Authorize',
-                          style: GoogleFonts.spaceMono(
-                              fontWeight: FontWeight.w700, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            const SizedBox(height: 16),
+            const Text(
+              'GitHub will request repository access, including private repositories. Authorization happens on github.com.',
+            ),
+            if (_device != null) ...[
+              const SizedBox(height: 24),
+              const Text('Enter this code on GitHub:'),
+              SelectableText(
+                _device!['user_code'] as String,
+                style: const TextStyle(fontSize: 32),
               ),
-            ),
-          ),
+              TextButton(
+                onPressed:
+                    () => Clipboard.setData(
+                      ClipboardData(text: _device!['user_code'] as String),
+                    ),
+                child: const Text('Copy code'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  try {
+                    final opened = await launchUrl(
+                      Uri.parse(_device!['verification_uri'] as String),
+                      mode: LaunchMode.externalApplication,
+                    );
+                    if (!opened) {
+                      throw Exception(
+                        'Open github.com/login/device in your browser.',
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) setState(() => _error = e.toString());
+                  }
+                },
+                child: const Text('Open GitHub'),
+              ),
+              const Text(
+                'Waiting for authorization. Return here after approving on GitHub.',
+              ),
+            ],
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            if (_error != null)
+              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            if (!_busy)
+              FilledButton(onPressed: _connect, child: const Text('Try again')),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ==========================================
 // PAGE 4: Select Repository
 // ==========================================
 class HostProjectSelectPage extends StatefulWidget {
-  const HostProjectSelectPage({super.key, required this.allowedRepos});
+  const HostProjectSelectPage({
+    super.key,
+    required this.allowedRepos,
+    this.defaultBranches = const {},
+  });
   final List<String> allowedRepos;
+  final Map<String, String> defaultBranches;
 
   @override
   State<HostProjectSelectPage> createState() => _HostProjectSelectPageState();
@@ -974,9 +712,12 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredRepos = widget.allowedRepos
-        .where((repo) => repo.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    final filteredRepos =
+        widget.allowedRepos
+            .where(
+              (repo) => repo.toLowerCase().contains(_searchQuery.toLowerCase()),
+            )
+            .toList();
 
     return Theme(
       data: ThemeData.dark().copyWith(
@@ -1011,17 +752,26 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
                   style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
                   decoration: InputDecoration(
                     hintText: 'Search repositories...',
-                    hintStyle: GoogleFonts.spaceMono(color: _WizardPalette.textDim),
-                    prefixIcon: const Icon(Icons.search, color: _WizardPalette.textDim),
+                    hintStyle: GoogleFonts.spaceMono(
+                      color: _WizardPalette.textDim,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: _WizardPalette.textDim,
+                    ),
                     filled: true,
                     fillColor: Colors.white.withValues(alpha: 0.05),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
+                      borderSide: const BorderSide(
+                        color: _WizardPalette.outline,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                      borderSide: const BorderSide(
+                        color: _WizardPalette.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -1037,7 +787,10 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
                     ),
                     child: Row(
                       children: [
-                        const _GitHubLogo(size: 24, color: _WizardPalette.primary),
+                        const _GitHubLogo(
+                          size: 24,
+                          color: _WizardPalette.primary,
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
@@ -1061,8 +814,14 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    HostProjectSettingsPage(repoName: name),
+                                builder:
+                                    (context) => HostProjectSettingsPage(
+                                      repoName: name,
+                                      repoUrl: 'https://github.com/$repo',
+                                      defaultBranch:
+                                          widget.defaultBranches[repo] ??
+                                          'main',
+                                    ),
                               ),
                             );
                           },
@@ -1084,7 +843,9 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
                     child: Text(
                       'No repositories found',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(color: _WizardPalette.textDim),
+                      style: GoogleFonts.spaceMono(
+                        color: _WizardPalette.textDim,
+                      ),
                     ),
                   ),
               ],
@@ -1105,10 +866,12 @@ class HostProjectSettingsPage extends ConsumerStatefulWidget {
     required this.repoName,
     this.repoUrl,
     this.existingLocalPath,
+    this.defaultBranch = 'main',
   });
   final String repoName;
   final String? repoUrl;
   final String? existingLocalPath;
+  final String defaultBranch;
 
   @override
   ConsumerState<HostProjectSettingsPage> createState() =>
@@ -1123,7 +886,8 @@ class _HostProjectSettingsPageState
   final _buildCommandController = TextEditingController();
   final _publishDirController = TextEditingController();
 
-  final List<MapEntry<TextEditingController, TextEditingController>> _envVars = [];
+  final List<MapEntry<TextEditingController, TextEditingController>> _envVars =
+      [];
 
   final _nameKey = GlobalKey();
   final _branchKey = GlobalKey();
@@ -1137,6 +901,7 @@ class _HostProjectSettingsPageState
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.repoName);
+    _branchController.text = widget.defaultBranch;
     _nameController.addListener(() => setState(() {}));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1197,9 +962,10 @@ class _HostProjectSettingsPageState
 
   @override
   Widget build(BuildContext context) {
-    final projName = _nameController.text.trim().isEmpty
-        ? 'project'
-        : _nameController.text.trim().toLowerCase().replaceAll(' ', '-');
+    final projName =
+        _nameController.text.trim().isEmpty
+            ? 'project'
+            : _nameController.text.trim().toLowerCase().replaceAll(' ', '-');
     final previewUrl = 'https://$projName.buildify.app';
 
     return Theme(
@@ -1209,486 +975,547 @@ class _HostProjectSettingsPageState
       ),
       child: GuidedTourOverlay(
         child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'build - ${widget.repoName}',
-            style: GoogleFonts.spaceMono(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: _WizardPalette.primary,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              'build - ${widget.repoName}',
+              style: GoogleFonts.spaceMono(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _WizardPalette.primary,
+              ),
             ),
           ),
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 580),
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              children: [
-                // Source info card for local deployments
-                if (widget.existingLocalPath != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 580),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                children: [
+                  // Source info card for local deployments
+                  if (widget.existingLocalPath != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.folder_open,
+                            color: Color(0xFF10B981),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.existingLocalPath!,
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 11,
+                                color: const Color(0xFF10B981),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.folder_open,
-                            color: Color(0xFF10B981), size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            widget.existingLocalPath!,
-                            style: GoogleFonts.spaceMono(
-                              fontSize: 11,
-                              color: const Color(0xFF10B981),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
+                  ],
+
+                  // Project Name Input
+                  Text(
+                    'Project name',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _WizardPalette.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: _nameKey,
+                    controller: _nameController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.outline,
                         ),
-                      ],
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.primary,
+                        ),
+                      ),
                     ),
                   ),
-                ],
-
-                // Project Name Input
-                Text(
-                  'Project name',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _WizardPalette.primary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  key: _nameKey,
-                  controller: _nameController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  previewUrl,
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Build Settings Header
-                Text(
-                  'Build settings',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _WizardPalette.primary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Framework / runtime selector
-                Text(
-                  'Framework',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  value: _selectedFramework, // ignore: deprecated_member_use
-                  dropdownColor: _WizardPalette.surfaceBody,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
-                    ),
-                  ),
-                  items: ['Static HTML', 'Node.js', 'Python FastAPI', 'Flask']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (val) => setState(() => _selectedFramework = val!),
-                ),
-                const SizedBox(height: 16),
-
-                // Branch to deploy
-                Text(
-                  'Branch to deploy',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  key: _branchKey,
-                  controller: _branchController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Base directory
-                Text(
-                  'Base directory',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _baseDirController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    hintText: '/',
-                    hintStyle: GoogleFonts.spaceMono(color: Colors.white30),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'The directory where Buildify installs dependencies and runs your build command.',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 10,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Build command
-                Text(
-                  'Build command',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _buildCommandController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    hintText: 'Examples: jekyll build, gulp build, make all',
-                    hintStyle: GoogleFonts.spaceMono(
-                      color: Colors.white30,
+                  const SizedBox(height: 6),
+                  Text(
+                    previewUrl,
+                    style: GoogleFonts.spaceMono(
                       fontSize: 12,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                      color: _WizardPalette.textDim,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 32),
 
-                // Publish directory
-                Text(
-                  'Publish directory',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
+                  // Build Settings Header
+                  Text(
+                    'Build settings',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _WizardPalette.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _publishDirController,
-                  style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
-                  decoration: InputDecoration(
-                    hintText: 'Examples: _site, dist, public',
-                    hintStyle: GoogleFonts.spaceMono(
-                      color: Colors.white30,
+                  const SizedBox(height: 16),
+
+                  // Framework / runtime selector
+                  Text(
+                    'Framework',
+                    style: GoogleFonts.spaceMono(
                       fontSize: 12,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _WizardPalette.primary),
+                      color: _WizardPalette.textDim,
                     ),
                   ),
-                ),
-                const SizedBox(height: 32),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: _selectedFramework, // ignore: deprecated_member_use
+                    dropdownColor: _WizardPalette.surfaceBody,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.outline,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.primary,
+                        ),
+                      ),
+                    ),
+                    items:
+                        ['Static HTML', 'Node.js', 'Python FastAPI', 'Flask']
+                            .map(
+                              (r) => DropdownMenuItem(value: r, child: Text(r)),
+                            )
+                            .toList(),
+                    onChanged:
+                        (val) => setState(() => _selectedFramework = val!),
+                  ),
+                  const SizedBox(height: 16),
 
-                // Environment Variables Header
-                Text(
-                  'Environment variables',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _WizardPalette.primary,
+                  // Branch to deploy
+                  Text(
+                    'Branch to deploy',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Define environment variables for more control and flexibility over your build.',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: _WizardPalette.textDim,
+                  const SizedBox(height: 6),
+                  TextField(
+                    key: _branchKey,
+                    controller: _branchController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.outline,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.primary,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // Environment Variable List
-                ...List.generate(_envVars.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _envVars[index].key,
-                            style: GoogleFonts.spaceMono(
-                              color: _WizardPalette.primary,
-                              fontSize: 12,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Key',
-                              hintStyle: GoogleFonts.spaceMono(
-                                color: Colors.white30,
+                  // Base directory
+                  Text(
+                    'Base directory',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _baseDirController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      hintText: '/',
+                      hintStyle: GoogleFonts.spaceMono(color: Colors.white30),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.outline,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'The directory where Buildify installs dependencies and runs your build command.',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 10,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Build command
+                  Text(
+                    'Build command',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _buildCommandController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      hintText: 'Examples: jekyll build, gulp build, make all',
+                      hintStyle: GoogleFonts.spaceMono(
+                        color: Colors.white30,
+                        fontSize: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.outline,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Publish directory
+                  Text(
+                    'Publish directory',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _publishDirController,
+                    style: GoogleFonts.spaceMono(color: _WizardPalette.primary),
+                    decoration: InputDecoration(
+                      hintText: 'Examples: _site, dist, public',
+                      hintStyle: GoogleFonts.spaceMono(
+                        color: Colors.white30,
+                        fontSize: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.outline,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: _WizardPalette.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Environment Variables Header
+                  Text(
+                    'Environment variables',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _WizardPalette.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Define environment variables for more control and flexibility over your build.',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _WizardPalette.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Environment Variable List
+                  ...List.generate(_envVars.length, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _envVars[index].key,
+                              style: GoogleFonts.spaceMono(
+                                color: _WizardPalette.primary,
                                 fontSize: 12,
                               ),
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.05),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                              decoration: InputDecoration(
+                                hintText: 'Key',
+                                hintStyle: GoogleFonts.spaceMono(
+                                  color: Colors.white30,
+                                  fontSize: 12,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.05),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _envVars[index].value,
-                            style: GoogleFonts.spaceMono(
-                              color: _WizardPalette.primary,
-                              fontSize: 12,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Value',
-                              hintStyle: GoogleFonts.spaceMono(
-                                color: Colors.white30,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _envVars[index].value,
+                              style: GoogleFonts.spaceMono(
+                                color: _WizardPalette.primary,
                                 fontSize: 12,
                               ),
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.05),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                              decoration: InputDecoration(
+                                hintText: 'Value',
+                                hintStyle: GoogleFonts.spaceMono(
+                                  color: Colors.white30,
+                                  fontSize: 12,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.05),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: Colors.redAccent),
-                          onPressed: () => _removeEnvVar(index),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.redAccent,
+                            ),
+                            onPressed: () => _removeEnvVar(index),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
 
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: _WizardPalette.primary,
-                    ),
-                    onPressed: _addEnvVar,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(
-                      'Add environment variables',
-                      style: GoogleFonts.spaceMono(fontSize: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: _WizardPalette.primary,
+                      ),
+                      onPressed: _addEnvVar,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(
+                        'Add environment variables',
+                        style: GoogleFonts.spaceMono(fontSize: 12),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 48),
+                  const SizedBox(height: 48),
 
-                // Deploy Button
-                ElevatedButton(
-                  key: _deployKey,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _WizardPalette.primary,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  // Deploy Button
+                  ElevatedButton(
+                    key: _deployKey,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _WizardPalette.primary,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                  ),
-                  onPressed: _isDeploying ? null : () async {
-                    final name = _nameController.text.trim();
-                    if (name.isEmpty) return;
+                    onPressed:
+                        _isDeploying
+                            ? null
+                            : () async {
+                              final name = _nameController.text.trim();
+                              if (name.isEmpty) return;
 
-                    setState(() {
-                      _isDeploying = true;
-                      _deployProgress = 'Initializing...';
-                    });
+                              setState(() {
+                                _isDeploying = true;
+                                _deployProgress = 'Initializing...';
+                              });
 
-                    try {
-                      final envMap = <String, String>{};
-                      for (final entry in _envVars) {
-                        final k = entry.key.text.trim();
-                        final v = entry.value.text.trim();
-                        if (k.isNotEmpty) {
-                          envMap[k] = v;
-                        }
-                      }
+                              try {
+                                final envMap = <String, String>{};
+                                for (final entry in _envVars) {
+                                  final k = entry.key.text.trim();
+                                  final v = entry.value.text.trim();
+                                  if (k.isNotEmpty) {
+                                    envMap[k] = v;
+                                  }
+                                }
 
-                      // Create the project in the backend (this allocates port and path)
-                      final project = await ref.read(embeddedBackendProvider).createProject(
-                            name: name,
-                            sourceType: _selectedFramework,
-                            customUrl: previewUrl,
-                            customLocalPath: widget.existingLocalPath,
-                            hostingMode: HostingMode.persistent,
-                            branch: _branchController.text.trim().isNotEmpty ? _branchController.text.trim() : 'main',
-                            buildCommand: _buildCommandController.text.trim(),
-                            publishDir: _publishDirController.text.trim(),
-                            baseDir: _baseDirController.text.trim(),
-                            envVars: envMap,
-                          );
+                                // Create the project in the backend (this allocates port and path)
+                                final project = await ref
+                                    .read(embeddedBackendProvider)
+                                    .createProject(
+                                      name: name,
+                                      sourceType: _selectedFramework,
+                                      customUrl: previewUrl,
+                                      customLocalPath: widget.existingLocalPath,
+                                      hostingMode: HostingMode.persistent,
+                                      branch:
+                                          _branchController.text
+                                                  .trim()
+                                                  .isNotEmpty
+                                              ? _branchController.text.trim()
+                                              : 'main',
+                                      buildCommand:
+                                          _buildCommandController.text.trim(),
+                                      publishDir:
+                                          _publishDirController.text.trim(),
+                                      baseDir: _baseDirController.text.trim(),
+                                      envVars: envMap,
+                                    );
 
-                      // Clone the repo if we have a URL and no local path already provided
-                      if (widget.repoUrl != null && widget.repoUrl!.isNotEmpty && widget.existingLocalPath == null) {
-                        await GitService.cloneRepository(
-                          repoUrl: widget.repoUrl!,
-                          localPath: project.localPath,
-                          onProgress: (status) {
-                            if (context.mounted) {
-                              setState(() => _deployProgress = status);
-                            }
-                          },
-                        );
-                      }
+                                // Clone the repo if we have a URL and no local path already provided
+                                if (widget.repoUrl != null &&
+                                    widget.repoUrl!.isNotEmpty &&
+                                    widget.existingLocalPath == null) {
+                                  await GitService.cloneRepository(
+                                    repoUrl: widget.repoUrl!,
+                                    localPath: project.localPath,
+                                    branch: _branchController.text.trim(),
+                                    accessToken: await GithubAuthService.storage
+                                        .read(key: GithubAuthService.tokenKey),
+                                    onProgress: (status) {
+                                      if (context.mounted) {
+                                        setState(
+                                          () => _deployProgress = status,
+                                        );
+                                      }
+                                    },
+                                  );
+                                }
 
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Successfully deployed $name',
-                              style: GoogleFonts.spaceMono(),
-                            ),
-                          ),
-                        );
-                        // Go back to projects home page dashboard
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Failed to deploy project: $e'),
-                          ),
-                        );
-                      }
-                    } finally {
-                      if (context.mounted) {
-                        setState(() {
-                          _isDeploying = false;
-                        });
-                      }
-                    }
-                  },
-                  child: _isDeploying
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _deployProgress,
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Successfully deployed $name',
+                                        style: GoogleFonts.spaceMono(),
+                                      ),
+                                    ),
+                                  );
+                                  // Go back to projects home page dashboard
+                                  Navigator.popUntil(
+                                    context,
+                                    (route) => route.isFirst,
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Failed to deploy project: $e',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (context.mounted) {
+                                  setState(() {
+                                    _isDeploying = false;
+                                  });
+                                }
+                              }
+                            },
+                    child:
+                        _isDeploying
+                            ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _deployProgress,
+                                  style: GoogleFonts.spaceMono(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            )
+                            : Text(
+                              'Deploy $projName',
                               style: GoogleFonts.spaceMono(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
                               ),
                             ),
-                          ],
-                        )
-                      : Text(
-                          'Deploy $projName',
-                          style: GoogleFonts.spaceMono(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 40),
-              ],
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }
