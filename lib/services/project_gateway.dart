@@ -33,8 +33,8 @@ class ProjectGateway {
   Future<String?> _token() async {
     final token = Platform.environment['CF_TUNNEL_TOKEN']?.trim();
     if (token != null && token.isNotEmpty) return token;
-    // Private Android builds load the local .env with --dart-define-from-file.
-    // Android does not inherit the build machine's process environment.
+    // The Android runner exposes its local connector token over a platform
+    // channel. Other build pipelines can supply it as a Dart define.
     const bundled = String.fromEnvironment('CF_TUNNEL_TOKEN');
     final buildToken =
         bundled.trim().isNotEmpty
