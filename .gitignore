@@ -17,6 +17,11 @@ migrate_working_dir/
 .env
 .env.*
 !.env.example
+config/supabase.*.json
+!config/supabase.*.example.json
+supabase/.temp/
+supabase/.branches/
+.backend-tools/
 *.pem
 secrets/
 **/google-services.json
