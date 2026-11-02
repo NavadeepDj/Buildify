@@ -1,14 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/ai_model_select_page.dart';
-import 'pages/auth_page.dart';
+import 'pages/hosted_account_page.dart';
 import 'pages/projects_home_page.dart';
 import 'pages/verification_page.dart';
 import 'theme/app_palette.dart';
+import 'providers/hosted_account_provider.dart';
+import 'services/hosted_auth_config.dart';
+import 'services/secure_auth_storage.dart';
 
-void main() {
-  runApp(const ProviderScope(child: BuildifyApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  SupabaseClient? client;
+  String? startupMessage;
+  try {
+    final config = HostedAuthConfig.fromDefines();
+    if (config != null) {
+      final supabase = await Supabase.initialize(
+        url: config.url,
+        publishableKey: config.publishableKey,
+        debug: false,
+        authOptions: FlutterAuthClientOptions(
+          localStorage: SecureAuthStorage(
+            projectHost: Uri.parse(config.url).host,
+          ),
+          pkceAsyncStorage: SecurePkceStorage(
+            projectHost: Uri.parse(config.url).host,
+          ),
+          // Initial hosted flow uses email codes; callback support is separate.
+          detectSessionInUri: false,
+        ),
+      );
+      client = supabase.client;
+    }
+  } on FormatException {
+    startupMessage =
+        'Account configuration is invalid in this build. Local hosting is still available.';
+  } catch (_) {
+    startupMessage =
+        'Account sign-in could not start. Restart the app to retry, or continue locally.';
+  }
+  runApp(
+    ProviderScope(
+      overrides: [
+        hostedClientProvider.overrideWithValue(client),
+        hostedStartupMessageProvider.overrideWithValue(startupMessage),
+      ],
+      child: const BuildifyApp(),
+    ),
+  );
 }
 
 class BuildifyApp extends ConsumerWidget {
@@ -64,18 +106,31 @@ class BuildifyApp extends ConsumerWidget {
         }
         if (uri.path == '/projects') {
           return MaterialPageRoute<void>(
-            builder: (ctx) => ProjectsHomePage(
-              onRunAiModel: () => Navigator.of(ctx).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AiModelSelectPage(),
+            builder:
+                (ctx) => ProjectsHomePage(
+                  onRunAiModel:
+                      () => Navigator.of(ctx).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AiModelSelectPage(),
+                        ),
+                      ),
                 ),
-              ),
-            ),
             settings: settings,
           );
         }
         return MaterialPageRoute<void>(
-          builder: (_) => const AuthPage(),
+          builder:
+              (_) => HostedAccountGate(
+                signedInBuilder:
+                    (ctx) => ProjectsHomePage(
+                      onRunAiModel:
+                          () => Navigator.of(ctx).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AiModelSelectPage(),
+                            ),
+                          ),
+                    ),
+              ),
           settings: settings,
         );
       },
