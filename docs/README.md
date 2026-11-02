@@ -1,5 +1,9 @@
 # Buildify documentation
 
+[Hosted development setup](hosted-development.md) covers creating the development
+project, applying the account migration, configuring verification mail, and
+running Flutter with validated public configuration.
+
 [HostAny delivery tracks](hostany-delivery-tracks.md) maps epic #75 to Navadeep,
 Sujith, and Harita, including issue ownership, dependencies, and file handoffs.
 

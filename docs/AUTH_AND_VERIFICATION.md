@@ -1,7 +1,16 @@
 # Buildify — Email & Phone Verification System
 
 **Document Version:** 1.0.0  
-**Status:** Implemented & Verified  
+**Status:** Legacy local authentication design; cloud migration planned
+
+The implementation described here stores accounts and verification challenges
+locally in SQLite. It is not a shared cloud authentication service, and this
+document is not evidence of real email/SMS delivery or production readiness.
+The replacement architecture is defined in
+[ADR 0001](decisions/0001-shared-accounts-and-management.md), with implementation
+tracked in [epic #75](https://github.com/NavadeepDj/Buildify/issues/75).
+For the initial cloud implementation and its remaining live verification steps,
+see [hosted development setup](hosted-development.md).
 
 ---
 
