@@ -1,5 +1,15 @@
 # Roadmap (reference)
 
+## Shared accounts and SaaS management (planned)
+
+Track the next delivery sequence in
+[epic #75](https://github.com/NavadeepDj/Buildify/issues/75): shared authentication
+and local-data migration, remote device/project management, subscriptions and
+branded URLs, then operational readiness and staged beta validation.
+[ADR 0001](decisions/0001-shared-accounts-and-management.md) records the architecture
+baseline and links unresolved provider, pricing, domain, and release decisions.
+This work is planned; it does not change the status of the runtime phases below.
+
 Rough phases discussed during development. Status is indicative — check the codebase for truth.
 
 | Phase | Topic | Status |
