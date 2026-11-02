@@ -61,75 +61,91 @@ class _AuthPageState extends ConsumerState<AuthPage>
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _submitting = true;
       _errorMessage = null;
     });
 
-    final authService = ref.read(authServiceProvider);
+    try {
+      final authService = ref.read(authServiceProvider);
 
-    if (_isLogin) {
-      final result = await authService.login(
-        identifier: _emailController.text,
-        password: _passwordController.text,
-      );
+      if (_isLogin) {
+        final result = await authService.login(
+          identifier: _emailController.text,
+          password: _passwordController.text,
+        );
 
-      if (!mounted) return;
-      setState(() => _submitting = false);
+        if (!mounted) return;
+        setState(() => _submitting = false);
 
-      if (result.isSuccess) {
-        final user = result.user as User;
-        ref.read(currentUserProvider.notifier).state = user;
-        ref.read(embeddedBackendProvider).devLogin(userName: user.name);
-        Navigator.of(context).pushReplacementNamed('/projects');
-      } else if (result.status == AuthStatus.pendingVerification) {
-        // Redirect user to verification page to complete pending verification
-        if (result.challenge != null) {
+        if (result.isSuccess) {
+          final user = result.user as User;
+          ref.read(currentUserProvider.notifier).state = user;
+          ref.read(embeddedBackendProvider).devLogin(userName: user.name);
+          Navigator.of(context).pushReplacementNamed('/projects');
+        } else if (result.status == AuthStatus.pendingVerification) {
+          // Redirect user to verification page to complete pending verification
+          if (result.challenge != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder:
+                    (_) => VerificationPage(
+                      challenge: result.challenge,
+                      user: result.user as User?,
+                    ),
+              ),
+            );
+          } else {
+            setState(() {
+              _errorMessage =
+                  'Account requires verification, but no active challenge found. Please re-register or contact support.';
+            });
+          }
+        } else {
+          setState(() => _errorMessage = result.message);
+        }
+      } else {
+        // Signup flow
+        final result = await authService.signUp(
+          name: _nameController.text,
+          password: _passwordController.text,
+          email:
+              _signupMethod == AuthMethod.email ? _emailController.text : null,
+          phone:
+              _signupMethod == AuthMethod.phone ? _phoneController.text : null,
+          defaultCountryCode: _selectedCountryCode,
+          method: _signupMethod,
+        );
+
+        if (!mounted) return;
+        setState(() => _submitting = false);
+
+        if (result.status == AuthStatus.pendingVerification &&
+            result.challenge != null) {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => VerificationPage(
-                challenge: result.challenge,
-                user: result.user as User?,
-              ),
+              builder:
+                  (_) => VerificationPage(
+                    challenge: result.challenge,
+                    user: result.user as User?,
+                  ),
             ),
           );
         } else {
-          setState(() {
-            _errorMessage =
-                'Account requires verification, but no active challenge found. Please re-register or contact support.';
-          });
+          setState(() => _errorMessage = result.message);
         }
-      } else {
-        setState(() => _errorMessage = result.message);
       }
-    } else {
-      // Signup flow
-      final result = await authService.signUp(
-        name: _nameController.text,
-        password: _passwordController.text,
-        email: _signupMethod == AuthMethod.email ? _emailController.text : null,
-        phone: _signupMethod == AuthMethod.phone ? _phoneController.text : null,
-        defaultCountryCode: _selectedCountryCode,
-        method: _signupMethod,
-      );
-
-      if (!mounted) return;
-      setState(() => _submitting = false);
-
-      if (result.status == AuthStatus.pendingVerification &&
-          result.challenge != null) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => VerificationPage(
-              challenge: result.challenge,
-              user: result.user as User?,
-            ),
-          ),
-        );
-      } else {
-        setState(() => _errorMessage = result.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Unable to complete authentication. Please try again.';
+        });
       }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -168,8 +184,8 @@ class _AuthPageState extends ConsumerState<AuthPage>
                     onCountryCodeChanged: (code) {
                       setState(() => _selectedCountryCode = code);
                     },
-                    onTogglePassword: () =>
-                        setState(() => _hidePassword = !_hidePassword),
+                    onTogglePassword:
+                        () => setState(() => _hidePassword = !_hidePassword),
                     onSubmit: _submit,
                   ),
                 ),
@@ -337,18 +353,19 @@ class _AuthCard extends StatelessWidget {
                 AnimatedSize(
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOut,
-                  child: isLogin
-                      ? const SizedBox.shrink()
-                      : Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _AuthField(
-                            controller: nameController,
-                            label: 'display name',
-                            hint: 'your name or handle',
-                            icon: Icons.person_outline,
-                            validator: (value) => _required(value, 'name'),
+                  child:
+                      isLogin
+                          ? const SizedBox.shrink()
+                          : Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _AuthField(
+                              controller: nameController,
+                              label: 'display name',
+                              hint: 'your name or handle',
+                              icon: Icons.person_outline,
+                              validator: (value) => _required(value, 'name'),
+                            ),
                           ),
-                        ),
                 ),
 
                 // Identifier fields
@@ -403,16 +420,46 @@ class _AuthCard extends StatelessWidget {
                               fontSize: 13,
                             ),
                             items: const [
-                              DropdownMenuItem(value: '+1', child: Text('+1 US/CA')),
-                              DropdownMenuItem(value: '+44', child: Text('+44 UK')),
-                              DropdownMenuItem(value: '+91', child: Text('+91 IN')),
-                              DropdownMenuItem(value: '+49', child: Text('+49 DE')),
-                              DropdownMenuItem(value: '+33', child: Text('+33 FR')),
-                              DropdownMenuItem(value: '+81', child: Text('+81 JP')),
-                              DropdownMenuItem(value: '+61', child: Text('+61 AU')),
-                              DropdownMenuItem(value: '+86', child: Text('+86 CN')),
-                              DropdownMenuItem(value: '+55', child: Text('+55 BR')),
-                              DropdownMenuItem(value: '+234', child: Text('+234 NG')),
+                              DropdownMenuItem(
+                                value: '+1',
+                                child: Text('+1 US/CA'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+44',
+                                child: Text('+44 UK'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+91',
+                                child: Text('+91 IN'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+49',
+                                child: Text('+49 DE'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+33',
+                                child: Text('+33 FR'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+81',
+                                child: Text('+81 JP'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+61',
+                                child: Text('+61 AU'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+86',
+                                child: Text('+86 CN'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+55',
+                                child: Text('+55 BR'),
+                              ),
+                              DropdownMenuItem(
+                                value: '+234',
+                                child: Text('+234 NG'),
+                              ),
                             ],
                             onChanged: (val) {
                               if (val != null) onCountryCodeChanged(val);
@@ -503,16 +550,17 @@ class _AuthCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
-                    child: submitting
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: _AuthColors.background,
-                            ),
-                          )
-                        : Text(isLogin ? 'login' : 'verify & signup'),
+                    child:
+                        submitting
+                            ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: _AuthColors.background,
+                              ),
+                            )
+                            : Text(isLogin ? 'login' : 'verify & signup'),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -574,14 +622,16 @@ class _MethodTab extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? _AuthColors.primary.withValues(alpha: 0.12)
-              : _AuthColors.field,
+          color:
+              isSelected
+                  ? _AuthColors.primary.withValues(alpha: 0.12)
+                  : _AuthColors.field,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF2DD4BF)
-                : _AuthColors.border.withValues(alpha: 0.5),
+            color:
+                isSelected
+                    ? const Color(0xFF2DD4BF)
+                    : _AuthColors.border.withValues(alpha: 0.5),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -675,9 +725,9 @@ class _AuthField extends StatelessWidget {
   }
 
   InputBorder _fieldBorder(Color color) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: color.withValues(alpha: 0.65)),
-      );
+    borderRadius: BorderRadius.circular(8),
+    borderSide: BorderSide(color: color.withValues(alpha: 0.65)),
+  );
 }
 
 class _BrandMark extends StatelessWidget {
@@ -730,8 +780,9 @@ class _MeshBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: animation,
-      builder: (context, child) =>
-          Transform.scale(scale: 1 + animation.value * 0.08, child: child),
+      builder:
+          (context, child) =>
+              Transform.scale(scale: 1 + animation.value * 0.08, child: child),
       child: ImageFiltered(
         imageFilter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
         child: Stack(
