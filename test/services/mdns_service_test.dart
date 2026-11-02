@@ -9,6 +9,7 @@ void main() {
     'BuildifyDiscoveryBeacon responds to discovery query',
     () async {
       final beacon = BuildifyDiscoveryBeacon();
+      addTearDown(beacon.stop);
       await beacon.start(
         serverPort: 8080,
         modelName: 'gemma-2b',
@@ -16,8 +17,11 @@ void main() {
       );
       expect(beacon.isRunning, isTrue);
 
-      final client =
-          await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final client = await RawDatagramSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+      );
+      addTearDown(client.close);
       final completer = Completer<Map<String, dynamic>>();
 
       client.listen((event) {
@@ -30,12 +34,14 @@ void main() {
         }
       });
 
-      final query = utf8.encode('BUILDIFY_DISCOVER');
+      final query = utf8.encode('BUILDIFY_DISCOVER:${beacon.secret!}');
       client.send(
-          query, InternetAddress.loopbackIPv4, BuildifyDiscoveryBeacon.beaconPort);
+        query,
+        InternetAddress.loopbackIPv4,
+        BuildifyDiscoveryBeacon.beaconPort,
+      );
 
-      final result =
-          await completer.future.timeout(const Duration(seconds: 5));
+      final result = await completer.future.timeout(const Duration(seconds: 5));
       expect(result['service'], 'buildify-ai');
       expect(result['port'], 8080);
       expect(result['model'], 'gemma-2b');
