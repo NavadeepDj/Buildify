@@ -12,9 +12,11 @@ import 'providers/management_account_provider.dart';
 import 'services/hosted_auth_config.dart';
 import 'services/management_api_config.dart';
 import 'services/secure_auth_storage.dart';
+import 'services/windows_app_storage.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await configureWindowsAppStorage();
   SupabaseClient? client;
   HostedAuthConfig? authConfig;
   String? startupMessage;

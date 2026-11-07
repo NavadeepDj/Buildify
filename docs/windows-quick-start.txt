@@ -1,0 +1,22 @@
+HostAny for Windows - development build
+
+1. Extract the ENTIRE zip into a writable folder, for example Downloads/HostAny.
+2. Double-click buildify_flutter.exe. Keep data/, native/ and all DLLs beside it.
+3. Sign in to your existing development account, or continue with local hosting.
+4. AI hosting: download a catalog model or import a GGUF, then start the server.
+   The CPU inference runtime and cloudflared are included. Model weights are not.
+5. Use the app's temporary Cloudflare URL to test access from another device.
+   Keep the host awake and the app running. A URL is not an always-on hosting SLA.
+6. Stop the tunnel and model in the app when you finish testing.
+
+This development build contains only public Supabase settings. It does not contain
+database passwords, service-role/backend keys, Resend keys or a platform-wide tunnel
+token. Don't put those secrets into this folder or a Flutter config file.
+
+If Windows reports missing VCRUNTIME140/MSVCP140 DLLs, install Microsoft's x64
+Visual C++ Redistributable from https://aka.ms/vs/17/release/vc_redist.x64.exe.
+The app is currently unsigned; public distribution/signing is a separate release
+step. Do not disable Windows security protections to run it.
+
+Device registration (#84), remote commands and paid branded URLs are not enabled
+by this desktop build. The current account API and local hosting remain separate.
