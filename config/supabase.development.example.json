@@ -1,5 +1,6 @@
 {
   "BUILDIFY_ENV": "development",
   "SUPABASE_URL": "https://REPLACE_WITH_PROJECT_REF.supabase.co",
-  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_REPLACE_WITH_PUBLIC_KEY"
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_REPLACE_WITH_PUBLIC_KEY",
+  "MANAGEMENT_API_URL": "https://REPLACE_WITH_PROJECT_REF.supabase.co/functions/v1/management"
 }

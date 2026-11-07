@@ -8,15 +8,19 @@ import 'pages/projects_home_page.dart';
 import 'pages/verification_page.dart';
 import 'theme/app_palette.dart';
 import 'providers/hosted_account_provider.dart';
+import 'providers/management_account_provider.dart';
 import 'services/hosted_auth_config.dart';
+import 'services/management_api_config.dart';
 import 'services/secure_auth_storage.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SupabaseClient? client;
+  HostedAuthConfig? authConfig;
   String? startupMessage;
   try {
     final config = HostedAuthConfig.fromDefines();
+    authConfig = config;
     if (config != null) {
       final supabase = await Supabase.initialize(
         url: config.url,
@@ -42,11 +46,21 @@ Future<void> main() async {
     startupMessage =
         'Account sign-in could not start. Restart the app to retry, or continue locally.';
   }
+  ManagementApiConfig? managementConfig;
+  String? managementMessage;
+  try {
+    managementConfig = ManagementApiConfig.fromDefines(authConfig);
+  } on FormatException {
+    managementMessage =
+        'Cloud profile settings are invalid in this build. Local hosting is still available.';
+  }
   runApp(
     ProviderScope(
       overrides: [
         hostedClientProvider.overrideWithValue(client),
         hostedStartupMessageProvider.overrideWithValue(startupMessage),
+        managementApiConfigProvider.overrideWithValue(managementConfig),
+        managementStartupMessageProvider.overrideWithValue(managementMessage),
       ],
       child: const BuildifyApp(),
     ),
