@@ -48,15 +48,15 @@ class AiServerController extends StateNotifier<AiServerState> {
         AiServerState(
           models: const [],
           downloads: {},
-          device: const DeviceSnapshot(
-            ramGb: 8,
-            availRamGb: 4.0,
-            freeStorageGb: 43.6,
-            batteryPercent: 72,
-            batteryCharging: false,
-            ipAddress: '192.168.0.121',
+          device: DeviceSnapshot(
+            ramGb: Platform.isWindows ? 0 : 8,
+            availRamGb: Platform.isWindows ? 0 : 4.0,
+            freeStorageGb: Platform.isWindows ? 0 : 43.6,
+            batteryPercent: Platform.isWindows ? 100 : 72,
+            batteryCharging: Platform.isWindows,
+            ipAddress: Platform.isWindows ? '127.0.0.1' : '192.168.0.121',
             tailscaleIp: null,
-            cpuLabel: '8-core ARM',
+            cpuLabel: Platform.isWindows ? 'Windows' : '8-core ARM',
           ),
           selectedModelId: '',
           status: ServerStatus.stopped,
@@ -305,7 +305,10 @@ class AiServerController extends StateNotifier<AiServerState> {
     );
   }
 
-  String get apiBaseUrl => 'http://${state.device.ipAddress}:${state.port}';
+  String get apiBaseUrl =>
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS
+          ? 'http://127.0.0.1:${state.port}'
+          : 'http://${state.device.ipAddress}:${state.port}';
 
   Future<void> _hydrateNativeState() async {
     final ip = await _native.getLocalIp();
@@ -850,6 +853,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     final urls = liveUrls;
     if (urls == null) return;
     try {
+      if (Platform.isWindows && !await urls.gateway.configured) return;
       if (state.status != ServerStatus.running) return;
       _namedUrlTimer ??= Timer.periodic(const Duration(seconds: 15), (_) {
         unawaited(_refreshNamedTunnel());

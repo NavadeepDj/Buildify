@@ -17,6 +17,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
+  // Own native servers and build processes as a tree. Windows closes this
+  // handle on app exit/crash, terminating children instead of leaving orphan
+  // inference servers or tunnels after the desktop window has gone away.
+  HANDLE process_job = ::CreateJobObjectW(nullptr, nullptr);
+  if (process_job != nullptr) {
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
+    limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    if (!::SetInformationJobObject(process_job, JobObjectExtendedLimitInformation,
+                                  &limits, sizeof(limits)) ||
+        !::AssignProcessToJobObject(process_job, ::GetCurrentProcess())) {
+      ::CloseHandle(process_job);
+      return EXIT_FAILURE;
+    }
+  } else {
+    return EXIT_FAILURE;
+  }
+
   flutter::DartProject project(L"data");
 
   std::vector<std::string> command_line_arguments =
@@ -27,7 +44,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"buildify_flutter", origin, size)) {
+  if (!window.Create(L"HostAny", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

@@ -1242,7 +1242,7 @@ class _SecuritySection extends StatelessWidget {
                     Switch(
                       value: requireApiKey,
                       onChanged: onToggleRequire,
-                      activeColor: _DetailPalette.primary, // ignore: deprecated_member_use
+                      activeThumbColor: _DetailPalette.primary,
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
@@ -1395,6 +1395,20 @@ class _HealthThresholdsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (Theme.of(context).platform == TargetPlatform.windows) {
+      return const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionLabel('health checks & auto-stop'),
+          SizedBox(height: 16),
+          Text(
+            'Windows manages system power and thermal protection. '
+            'The app’s phone auto-stop thresholds are not enabled on Windows. '
+            'Stop the model and tunnel when you finish hosting.',
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1454,7 +1468,7 @@ class _HealthThresholdsSection extends StatelessWidget {
                     Switch(
                       value: thermalStop,
                       onChanged: onThermalChanged,
-                      activeColor: _DetailPalette.primary, // ignore: deprecated_member_use
+                      activeThumbColor: _DetailPalette.primary,
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],
@@ -1578,7 +1592,7 @@ class _RuntimeControlsSection extends StatelessWidget {
                     Switch(
                       value: lowPowerMode,
                       onChanged: onLowPowerChanged,
-                      activeColor: _DetailPalette.primary, // ignore: deprecated_member_use
+                      activeThumbColor: _DetailPalette.primary,
                       activeTrackColor: _DetailPalette.outlineVariant,
                     ),
                   ],

@@ -31,7 +31,10 @@ class ProcessServer {
     // Windows essentials
     'pathext', 'systemroot', 'systemdrive', 'comspec', 'windir', 'temp', 'tmp',
     'userprofile', 'homedrive', 'homepath', 'appdata', 'localappdata',
-    'programfiles', 'programfiles(x86)', 'programdata', 'processor_architecture',
+    'programfiles',
+    'programfiles(x86)',
+    'programdata',
+    'processor_architecture',
     'number_of_processors', 'os', 'username', 'computername',
   };
 
@@ -61,11 +64,15 @@ class ProcessServer {
 
     try {
       if (Platform.isWindows) {
+        // cmd.exe does not understand Dart's backslash quote escaping. Expand
+        // the intentionally user-authored command inside cmd instead, preserving
+        // executable/argument paths containing spaces. No host secrets are added.
         _process = await Process.start(
           'cmd',
-          ['/c', command],
+          ['/d', '/c', '%BUILDIFY_PROCESS_COMMAND%'],
           workingDirectory: workingDirectory,
-          environment: env,
+          environment: {...env, 'BUILDIFY_PROCESS_COMMAND': command},
+          includeParentEnvironment: false,
           runInShell: false,
         );
       } else {
@@ -74,6 +81,7 @@ class ProcessServer {
           ['-c', command],
           workingDirectory: workingDirectory,
           environment: env,
+          includeParentEnvironment: false,
         );
       }
     } catch (_) {
@@ -83,31 +91,45 @@ class ProcessServer {
         [Platform.isWindows ? '/c' : '-c', command],
         workingDirectory: workingDirectory,
         environment: env,
+        includeParentEnvironment: false,
         runInShell: true,
       );
     }
 
-    _process!.stdout
+    final startedProcess = _process!;
+    startedProcess.stdout
         .transform(const Utf8Decoder(allowMalformed: true))
         .listen((line) => onLog?.call('[stdout] $line'));
 
-    _process!.stderr
+    startedProcess.stderr
         .transform(const Utf8Decoder(allowMalformed: true))
         .listen((line) => onLog?.call('[stderr] $line', isError: true));
 
-    _process!.exitCode.then((code) {
-      onLog?.call('[server] process exited with code $code',
-          isError: code != 0);
-      _process = null;
+    startedProcess.exitCode.then((code) {
+      onLog?.call(
+        '[server] process exited with code $code',
+        isError: code != 0,
+      );
+      if (identical(_process, startedProcess)) _process = null;
     });
   }
 
   Future<void> stop() async {
     final proc = _process;
     if (proc == null) return;
-    _process = null;
-
-    proc.kill(ProcessSignal.sigterm);
+    if (Platform.isWindows) {
+      // cmd.exe is only the project command launcher. Kill its owned process
+      // tree so Node/Python children do not keep the project port bound.
+      final root = Platform.environment['SystemRoot'] ?? r'C:\Windows';
+      await Process.run('$root\\System32\\taskkill.exe', [
+        '/PID',
+        '${proc.pid}',
+        '/T',
+        '/F',
+      ], runInShell: false);
+    } else {
+      proc.kill(ProcessSignal.sigterm);
+    }
     // Give it 3 seconds to exit gracefully before force-killing
     await Future.any([
       proc.exitCode,
@@ -116,6 +138,7 @@ class ProcessServer {
     try {
       proc.kill(ProcessSignal.sigkill);
     } catch (_) {}
+    if (identical(_process, proc)) _process = null;
   }
 
   /// Runs a build command to completion and streams its output.
@@ -141,9 +164,10 @@ class ProcessServer {
       if (Platform.isWindows) {
         process = await Process.start(
           'cmd',
-          ['/c', command],
+          ['/d', '/c', '%BUILDIFY_PROCESS_COMMAND%'],
           workingDirectory: workingDirectory,
-          environment: env,
+          environment: {...env, 'BUILDIFY_PROCESS_COMMAND': command},
+          includeParentEnvironment: false,
           runInShell: false,
         );
       } else {
@@ -152,6 +176,7 @@ class ProcessServer {
           ['-c', command],
           workingDirectory: workingDirectory,
           environment: env,
+          includeParentEnvironment: false,
         );
       }
     } catch (_) {
@@ -160,6 +185,7 @@ class ProcessServer {
         [Platform.isWindows ? '/c' : '-c', command],
         workingDirectory: workingDirectory,
         environment: env,
+        includeParentEnvironment: false,
         runInShell: true,
       );
     }

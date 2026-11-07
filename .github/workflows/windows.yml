@@ -1,0 +1,36 @@
+name: Windows desktop
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['lib/**', 'test/**', 'integration_test/**', 'windows/**', 'pubspec.*', 'scripts/*windows*', 'docs/windows*', '.github/workflows/windows.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test test/services/desktop_server_bridge_test.dart
+      - name: Native Windows plugin and UI smoke
+        run: flutter test integration_test/windows_smoke_test.dart -d windows
+      - name: Build complete Windows release
+        shell: pwsh
+        run: ./scripts/build-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HostAny-windows-x64
+          path: build/HostAny-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 7
