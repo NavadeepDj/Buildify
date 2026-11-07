@@ -6,12 +6,14 @@ on:
     paths:
       - 'contracts/management/**'
       - 'docs/api/management-v1.md'
+      - 'docs/api/device-enrollment-v1.md'
       - '.github/workflows/management-contract.yml'
   push:
     branches: [main]
     paths:
       - 'contracts/management/**'
       - 'docs/api/management-v1.md'
+      - 'docs/api/device-enrollment-v1.md'
       - '.github/workflows/management-contract.yml'
   workflow_dispatch:
 
