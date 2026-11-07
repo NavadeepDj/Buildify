@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/hosted_account_provider.dart';
+import '../providers/management_account_provider.dart';
 import '../services/hosted_account_service.dart';
+import '../widgets/management_account_panel.dart';
 
 /// Cloud account UI. Legacy SQLite accounts remain separate during migration.
 class HostedAccountPage extends ConsumerStatefulWidget {
@@ -175,7 +177,16 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
                   ),
                   const SizedBox(height: 12),
                   if (account != null) ...[
-                    Text(account.name),
+                    ManagementAccountPanel(
+                      fallbackName: account.name,
+                      onSignInAgain:
+                          _busy
+                              ? null
+                              : () => _perform((service) async {
+                                await service.signOut();
+                                _complete();
+                              }),
+                    ),
                     Text(account.email),
                     const SizedBox(height: 16),
                     const Text(
@@ -393,18 +404,22 @@ class HostedAccountGate extends ConsumerWidget {
   final WidgetBuilder signedInBuilder;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => ref
-      .watch(hostedAccountProvider)
-      .when(
-        data:
-            (account) =>
-                account == null
-                    ? const HostedAccountPage()
-                    : signedInBuilder(context),
-        loading:
-            () => const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            ),
-        error: (_, _) => const HostedAccountPage(),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Start the cloud read after sign-in without blocking the local dashboard.
+    ref.watch(managementAccountProvider);
+    return ref
+        .watch(hostedAccountProvider)
+        .when(
+          data:
+              (account) =>
+                  account == null
+                      ? const HostedAccountPage()
+                      : signedInBuilder(context),
+          loading:
+              () => const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              ),
+          error: (_, _) => const HostedAccountPage(),
+        );
+  }
 }

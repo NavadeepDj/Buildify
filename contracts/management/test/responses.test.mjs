@@ -16,11 +16,10 @@ const validate = (name, value) => ajv.compile({
   $ref: `#/$defs/${name}`,
 })(value);
 
-const requestId = '22222222-2222-4222-8222-222222222222';
-const account = () => ({
-  data: { id: '11111111-1111-4111-8111-111111111111', display_name: 'Example user' },
-  request_id: requestId,
-});
+// The Dart consumer test reads this same fixture; schema drift must fail here.
+const canonicalAccount = JSON.parse(readFileSync(new URL('../examples/account.json', import.meta.url)));
+const requestId = canonicalAccount.request_id;
+const account = () => structuredClone(canonicalAccount);
 
 test('account response accepts a synthetic confirmed-account representation', () => {
   assert.equal(validate('AccountResponse', account()), true);

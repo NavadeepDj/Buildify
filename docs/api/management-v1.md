@@ -1,8 +1,8 @@
 # HostAny management API v1: foundation contract
 
-Status: draft for #83. This document describes the first backend slice; it does
-not mean the endpoints are deployed. Backend implementation belongs in the
-separate private SaaS repository.
+Status: initial reviewed contract for #83. The private implementation has a
+controlled development deployment; production readiness remains open. Backend
+implementation belongs in the separate private SaaS repository.
 The implementation repository is [hostany-management](https://github.com/NavadeepDj/hostany-management)
 (private; access required). Prerequisite #78's database authorization evidence remains
 a release gate.
@@ -22,6 +22,10 @@ The first implementation exposes only these logical routes:
 - `GET /v1/health`: minimal service/version liveness; no account or provider data.
 - `GET /v1/account`: the confirmed caller's account ID and display name.
 - `OPTIONS` for supported routes: browser preflight for approved origins.
+
+The optional [Flutter account client](flutter-management-client.md) uses the
+existing Supabase user session and a public build-time management endpoint. It
+does not require backend credentials or block local projects on cloud failures.
 
 Device enrollment (#84), command acquisition (#87), billing (#93/#94), and
 publication (#95-#97) are later contracts. Do not return invented device data or
