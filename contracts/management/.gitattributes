@@ -1,0 +1,2 @@
+# Generators emit LF; keep checkout output stable across operating systems.
+* text eol=lf

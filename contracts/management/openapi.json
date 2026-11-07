@@ -1,0 +1,726 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HostAny Management API",
+    "version": "0.1.0",
+    "description": "Draft foundation contract for issue #83. The endpoints are proposed, not a deployment claim. No device commands, billing or paid routing are defined yet.",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "servers": [
+    {
+      "url": "https://management.example.invalid",
+      "description": "Placeholder only. Configure the real environment base URL and function prefix separately."
+    }
+  ],
+  "tags": [
+    {
+      "name": "Foundation",
+      "description": "Minimal service and signed-in account operations."
+    }
+  ],
+  "security": [
+    {
+      "UserSession": []
+    }
+  ],
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "operationId": "getManagementHealth",
+        "summary": "Check management-service liveness only.",
+        "description": "No request body or query parameters are accepted. See the foundation policy document for authentication, origin, size and rate checks.",
+        "tags": [
+          "Foundation"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      },
+      "options": {
+        "summary": "Preflight for an explicitly allowed browser origin.",
+        "description": "No user identity is granted by preflight. Unknown origins are denied. Native clients may omit Origin on the actual request.",
+        "tags": [
+          "Foundation"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "Access-Control-Request-Method",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GET"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Approved preflight; empty body.",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "description": "Exact allowed origin, never a reflected arbitrary origin.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "GET, OPTIONS"
+                  ]
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "authorization, apikey"
+                  ]
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "Origin"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          }
+        },
+        "operationId": "getManagementHealthPreflight"
+      }
+    },
+    "/v1/account": {
+      "get": {
+        "operationId": "getCurrentAccount",
+        "summary": "Read the confirmed authenticated caller account.",
+        "description": "No request body or query parameters are accepted. See the foundation policy document for authentication, origin, size and rate checks.",
+        "tags": [
+          "Foundation"
+        ],
+        "security": [
+          {
+            "UserSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      },
+      "options": {
+        "summary": "Preflight for an explicitly allowed browser origin.",
+        "description": "No user identity is granted by preflight. Unknown origins are denied. Native clients may omit Origin on the actual request.",
+        "tags": [
+          "Foundation"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "Access-Control-Request-Method",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GET"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Approved preflight; empty body.",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "description": "Exact allowed origin, never a reflected arbitrary origin.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "GET, OPTIONS"
+                  ]
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "authorization, apikey"
+                  ]
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "Origin"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          }
+        },
+        "operationId": "getCurrentAccountPreflight"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "UserSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Verified Supabase user access token from the configured project. Public publishable/anon/service-role keys are not user sessions. A gateway may additionally require an apikey header containing public project configuration."
+      }
+    },
+    "schemas": {
+      "Account": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "AccountResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Account"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fresh server-generated correlation ID; matches X-Request-ID."
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "api_version"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok"
+                ]
+              },
+              "api_version": {
+                "type": "string",
+                "enum": [
+                  "v1"
+                ]
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fresh server-generated correlation ID; matches X-Request-ID."
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "invalid_request",
+                  "authentication_required",
+                  "invalid_token",
+                  "email_confirmation_required",
+                  "forbidden",
+                  "not_found",
+                  "method_not_allowed",
+                  "payload_too_large",
+                  "unsupported_media_type",
+                  "rate_limited",
+                  "dependency_unavailable",
+                  "internal_error"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fresh server-generated correlation ID; matches X-Request-ID."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Invalid request shape or unsupported query fields.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error401": {
+        "description": "Missing or invalid user access token.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "Unconfirmed account or denied permission/origin.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "Unknown route or inaccessible resource.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error405": {
+        "description": "Unsupported HTTP method.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          },
+          "Allow": {
+            "description": "Methods supported by this route.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GET, OPTIONS"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error413": {
+        "description": "Request exceeds configured input limits.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error429": {
+        "description": "Rate limit reached.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          },
+          "Retry-After": {
+            "description": "Positive whole seconds before retrying.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,5}$"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error500": {
+        "description": "Internal failure; details are not disclosed.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Required dependency unavailable; authorization fails closed.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}
