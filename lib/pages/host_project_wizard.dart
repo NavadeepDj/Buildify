@@ -70,7 +70,10 @@ class _HostProjectSourcePageState extends ConsumerState<HostProjectSourcePage> {
           tooltipPosition: TooltipPosition.top,
         ),
       ];
-      ref.read(guidedTourNotifierProvider.notifier).startTour(steps);
+      ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
+            steps,
+            tourKey: 'buildify_tour_wizard_source',
+          );
     });
   }
 
@@ -928,7 +931,10 @@ class _HostProjectSettingsPageState
           tooltipPosition: TooltipPosition.top,
         ),
       ];
-      ref.read(guidedTourNotifierProvider.notifier).startTour(steps);
+      ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
+            steps,
+            tourKey: 'buildify_tour_wizard_config',
+          );
     });
   }
 
