@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+const _storageKeyUserTourStatus = 'buildify_user_tour_status';
 const _storageKeyHasCompletedTour = 'buildify_has_completed_guided_tour';
 
 /// Model representing a step in the guided onboarding tour.
@@ -59,34 +60,51 @@ class GuidedTourState {
 class GuidedTourNotifier extends StateNotifier<GuidedTourState> {
   GuidedTourNotifier() : super(const GuidedTourState());
 
-  static const _storage = FlutterSecureStorage();
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   // Which completion key the currently-active tour writes to when finished.
-  String _activeTourKey = _storageKeyHasCompletedTour;
+  String _activeTourKey = _storageKeyUserTourStatus;
 
   /// Checks storage and starts the tour if it's the user's first launch (state 0).
-  /// Once seen, the state becomes 1 (old user) and the tour never auto-starts again.
+  /// Once state is 1 (old user), guided tour never auto-starts anywhere in the app.
   Future<void> checkAndAutoStartTour(
     List<GuidedTourStep> steps, {
-    String tourKey = _storageKeyHasCompletedTour,
+    String? tourKey,
   }) async {
     try {
-      final status = await _storage.read(key: tourKey);
-      // '1' or 'true' means old user: do NOT start tour
-      if (status == '1' || status == 'true') {
+      // Check the master variable: '1' or 'true' means old user -> NEVER start tour
+      final masterStatus = await _storage.read(key: _storageKeyUserTourStatus);
+      if (masterStatus == '1' || masterStatus == 'true') {
         return;
       }
+
+      // Check legacy completion key if present
+      final legacyStatus = await _storage.read(key: _storageKeyHasCompletedTour);
+      if (legacyStatus == '1' || legacyStatus == 'true') {
+        await _storage.write(key: _storageKeyUserTourStatus, value: '1');
+        return;
+      }
+
+      if (tourKey != null) {
+        final screenStatus = await _storage.read(key: tourKey);
+        if (screenStatus == '1' || screenStatus == 'true') {
+          return;
+        }
+      }
+
       // '0' or null means brand new first-time user: start tour
-      startTour(steps, tourKey: tourKey);
+      startTour(steps, tourKey: tourKey ?? _storageKeyUserTourStatus);
     } catch (_) {
-      // On storage read error, do NOT force tour on returning users
+      // On storage read error, quietly suppress tour to avoid disrupting returning users
     }
   }
 
   /// Manually starts the guided tour with a given list of steps.
   void startTour(
     List<GuidedTourStep> steps, {
-    String tourKey = _storageKeyHasCompletedTour,
+    String tourKey = _storageKeyUserTourStatus,
   }) {
     if (steps.isEmpty) return;
     _activeTourKey = tourKey;
@@ -113,18 +131,23 @@ class GuidedTourNotifier extends StateNotifier<GuidedTourState> {
     state = state.copyWith(currentStepIndex: state.currentStepIndex - 1);
   }
 
-  /// Skip or complete the tour and persist state as 1 (old user).
+  /// Skip or complete the tour and persist master state as 1 (old user).
   Future<void> completeTour() async {
     state = state.copyWith(isActive: false);
     try {
-      // Save state as '1' (completed / old user)
-      await _storage.write(key: _activeTourKey, value: '1');
+      // Save master state as '1' (completed / old user)
+      await _storage.write(key: _storageKeyUserTourStatus, value: '1');
+      await _storage.write(key: _storageKeyHasCompletedTour, value: '1');
+      if (_activeTourKey.isNotEmpty && _activeTourKey != _storageKeyUserTourStatus) {
+        await _storage.write(key: _activeTourKey, value: '1');
+      }
     } catch (_) {}
   }
 
   /// Reset tour completion state (for testing or settings option).
   Future<void> resetTourState() async {
     try {
+      await _storage.delete(key: _storageKeyUserTourStatus);
       await _storage.delete(key: _storageKeyHasCompletedTour);
     } catch (_) {}
   }
