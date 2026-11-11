@@ -69,7 +69,10 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
         tooltipPosition: TooltipPosition.top,
       ),
     ];
-    ref.read(guidedTourNotifierProvider.notifier).startTour(steps);
+    ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
+          steps,
+          tourKey: 'buildify_tour_ai_models',
+        );
   }
 
   @override

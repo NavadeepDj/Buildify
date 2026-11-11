@@ -64,20 +64,22 @@ class GuidedTourNotifier extends StateNotifier<GuidedTourState> {
   // Which completion key the currently-active tour writes to when finished.
   String _activeTourKey = _storageKeyHasCompletedTour;
 
-  /// Checks storage and starts the tour if it's the user's first launch.
-  /// Pass a distinct [tourKey] to track completion per-page independently.
+  /// Checks storage and starts the tour if it's the user's first launch (state 0).
+  /// Once seen, the state becomes 1 (old user) and the tour never auto-starts again.
   Future<void> checkAndAutoStartTour(
     List<GuidedTourStep> steps, {
     String tourKey = _storageKeyHasCompletedTour,
   }) async {
     try {
-      final completed = await _storage.read(key: tourKey);
-      if (completed != 'true') {
-        startTour(steps, tourKey: tourKey);
+      final status = await _storage.read(key: tourKey);
+      // '1' or 'true' means old user: do NOT start tour
+      if (status == '1' || status == 'true') {
+        return;
       }
-    } catch (_) {
-      // In case of storage read error, default to starting the tour
+      // '0' or null means brand new first-time user: start tour
       startTour(steps, tourKey: tourKey);
+    } catch (_) {
+      // On storage read error, do NOT force tour on returning users
     }
   }
 
@@ -111,11 +113,12 @@ class GuidedTourNotifier extends StateNotifier<GuidedTourState> {
     state = state.copyWith(currentStepIndex: state.currentStepIndex - 1);
   }
 
-  /// Skip or complete the tour and persist completion.
+  /// Skip or complete the tour and persist state as 1 (old user).
   Future<void> completeTour() async {
     state = state.copyWith(isActive: false);
     try {
-      await _storage.write(key: _activeTourKey, value: 'true');
+      // Save state as '1' (completed / old user)
+      await _storage.write(key: _activeTourKey, value: '1');
     } catch (_) {}
   }
 

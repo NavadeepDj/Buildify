@@ -217,6 +217,12 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
   }
 
   void _checkAndStartTour() {
+    // If the user already has projects in the database, they are an existing user: mark state 1 and skip tour!
+    final projects = ref.read(backendProjectsProvider).value ?? [];
+    if (projects.isNotEmpty) {
+      ref.read(guidedTourNotifierProvider.notifier).completeTour();
+      return;
+    }
     ref
         .read(guidedTourNotifierProvider.notifier)
         .checkAndAutoStartTour(_buildTourSteps());
