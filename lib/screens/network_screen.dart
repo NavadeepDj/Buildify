@@ -33,9 +33,10 @@ class NetworkScreen extends ConsumerWidget {
                 _InfoRow(label: 'Status', value: _statusLabel(state.status)),
                 _InfoRow(
                   label: 'Auth',
-                  value: state.security.requireApiKey
-                      ? 'API key required'
-                      : 'Open (no key)',
+                  value:
+                      state.security.requireApiKey
+                          ? 'API key required'
+                          : 'Open (no key)',
                 ),
                 const SizedBox(height: 10),
                 Container(
@@ -66,6 +67,36 @@ class NetworkScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 18),
         const _SectionTitle('Cloudflare Tunnel'),
+        SwitchListTile(
+          title: const Text('Allow public AI sharing'),
+          subtitle: const Text(
+            'Requires an API key. Restart the model after changing authentication before publishing.',
+          ),
+          value: controller.modelAccessScope == ModelAccessScope.public,
+          onChanged: (enabled) async {
+            try {
+              if (enabled) {
+                if (state.security.apiKey.isEmpty) {
+                  await controller.regenerateApiKey();
+                }
+                await controller.setRequireApiKey(true);
+              }
+              await controller.setModelAccessScope(
+                enabled
+                    ? ModelAccessScope.public
+                    : ModelAccessScope.deviceNetwork,
+              );
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sharing settings could not be saved.'),
+                  ),
+                );
+              }
+            }
+          },
+        ),
         const SizedBox(height: 8),
         Card(
           child: Padding(
@@ -87,7 +118,10 @@ class NetworkScreen extends ConsumerWidget {
                 ),
                 if (tunnel.publicUrl != null) ...[
                   const SizedBox(height: 10),
-                  const Text('Public URL', style: TextStyle(color: AppPalette.muted, fontSize: 12)),
+                  const Text(
+                    'Public URL',
+                    style: TextStyle(color: AppPalette.muted, fontSize: 12),
+                  ),
                   const SizedBox(height: 4),
                   Container(
                     width: double.infinity,
@@ -110,7 +144,11 @@ class NetworkScreen extends ConsumerWidget {
                   FilledButton.icon(
                     onPressed: () {
                       if (tunnel.publicUrl != null) {
-                        unawaited(Clipboard.setData(ClipboardData(text: tunnel.publicUrl!)));
+                        unawaited(
+                          Clipboard.setData(
+                            ClipboardData(text: tunnel.publicUrl!),
+                          ),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Tunnel URL copied')),
                         );
@@ -120,28 +158,38 @@ class NetworkScreen extends ConsumerWidget {
                     label: const Text('Copy Tunnel URL'),
                   ),
                 ],
-                if (tunnel.lastError != null && tunnel.status == TunnelStatus.failed) ...[
+                if (tunnel.lastError != null &&
+                    tunnel.status == TunnelStatus.failed) ...[
                   const SizedBox(height: 8),
-                  Text(tunnel.lastError!, style: const TextStyle(color: AppPalette.error, fontSize: 12)),
+                  Text(
+                    tunnel.lastError!,
+                    style: const TextStyle(
+                      color: AppPalette.error,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: tunnel.status == TunnelStatus.running ||
-                                tunnel.status == TunnelStatus.starting
-                            ? null
-                            : () async {
-                              final ok = await controller.startTunnel();
-                              if (!ok && context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Start the AI server before enabling tunnel'),
-                                  ),
-                                );
-                              }
-                            },
+                        onPressed:
+                            tunnel.status == TunnelStatus.running ||
+                                    tunnel.status == TunnelStatus.starting
+                                ? null
+                                : () async {
+                                  final ok = await controller.startTunnel();
+                                  if (!ok && context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Enable public sharing and restart with API-key protection before publishing.',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
                         icon: Icon(
                           tunnel.status == TunnelStatus.running
                               ? Icons.cloud_done
@@ -161,9 +209,10 @@ class NetworkScreen extends ConsumerWidget {
                         tunnel.status == TunnelStatus.starting)
                       IconButton.filledTonal(
                         tooltip: 'Stop tunnel',
-                        onPressed: tunnel.status == TunnelStatus.running
-                            ? () => unawaited(controller.stopTunnel())
-                            : null,
+                        onPressed:
+                            tunnel.status == TunnelStatus.running
+                                ? () => unawaited(controller.stopTunnel())
+                                : null,
                         icon: const Icon(Icons.stop_circle_outlined),
                       ),
                   ],
@@ -189,13 +238,23 @@ class NetworkScreen extends ConsumerWidget {
                 if (state.device.tailscaleIp != null) ...[
                   Row(
                     children: [
-                      Icon(Icons.check_circle, color: AppPalette.teal, size: 18),
+                      Icon(
+                        Icons.check_circle,
+                        color: AppPalette.teal,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
-                      const Text('Tailscale connected', style: TextStyle(fontWeight: FontWeight.w700)),
+                      const Text(
+                        'Tailscale connected',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _InfoRow(label: 'Tailscale IP', value: state.device.tailscaleIp!),
+                  _InfoRow(
+                    label: 'Tailscale IP',
+                    value: state.device.tailscaleIp!,
+                  ),
                   const SizedBox(height: 10),
                   Container(
                     width: double.infinity,
@@ -217,7 +276,8 @@ class NetworkScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   FilledButton.icon(
                     onPressed: () {
-                      final url = 'http://${state.device.tailscaleIp}:${state.port}';
+                      final url =
+                          'http://${state.device.tailscaleIp}:${state.port}';
                       unawaited(Clipboard.setData(ClipboardData(text: url)));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Tailscale URL copied')),
@@ -229,9 +289,16 @@ class NetworkScreen extends ConsumerWidget {
                 ] else ...[
                   Row(
                     children: [
-                      const Icon(Icons.vpn_lock, color: AppPalette.muted, size: 18),
+                      const Icon(
+                        Icons.vpn_lock,
+                        color: AppPalette.muted,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
-                      const Text('Not connected', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text(
+                        'Not connected',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -253,7 +320,11 @@ class NetworkScreen extends ConsumerWidget {
                     '4. Come back here — your Tailscale IP will appear automatically\n'
                     '5. On your laptop, install Tailscale and log in with the same account\n'
                     '6. Use the Tailscale URL above from your laptop',
-                    style: TextStyle(color: AppPalette.muted, fontSize: 11, height: 1.5),
+                    style: TextStyle(
+                      color: AppPalette.muted,
+                      fontSize: 11,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ],

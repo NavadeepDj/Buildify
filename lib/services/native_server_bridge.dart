@@ -9,6 +9,7 @@ abstract class ServerBridge {
   Future<NativeServerResponse> startServer({
     required String modelPath,
     required int port,
+    int? contextTokens,
     String? apiKey,
     int idleMinutes,
     int batteryStopPercent,
@@ -20,7 +21,11 @@ abstract class ServerBridge {
   Future<String?> getLocalIp();
   Future<String?> getTailscaleIp();
   Future<Map<String, dynamic>?> getDeviceMetrics();
-  Future<NativeTunnelResponse> startTunnel({required int port, String? tunnelUrl, String? tunnelToken});
+  Future<NativeTunnelResponse> startTunnel({
+    required int port,
+    String? tunnelUrl,
+    String? tunnelToken,
+  });
   Future<NativeTunnelResponse> stopTunnel();
   Future<NativeTunnelStatus?> getTunnelStatus();
 }
@@ -34,23 +39,31 @@ class NativeServerBridge implements ServerBridge {
   Future<NativeServerResponse> startServer({
     required String modelPath,
     required int port,
+    int? contextTokens,
     String? apiKey,
     int idleMinutes = 0,
     int batteryStopPercent = 0,
     bool thermalStop = true,
   }) async {
-    try {
-      final raw = await _channel.invokeMapMethod<String, dynamic>(
-        'startServer',
-        <String, dynamic>{
-          'modelPath': modelPath,
-          'port': port,
-          if (apiKey != null && apiKey.isNotEmpty) 'apiKey': apiKey,
-          'idleMinutes': idleMinutes,
-          'batteryStopPct': batteryStopPercent,
-          'thermalStop': thermalStop,
-        },
+    if (contextTokens != null &&
+        (contextTokens < 128 || contextTokens > 8192)) {
+      return const NativeServerResponse(
+        ok: false,
+        status: 'stopped',
+        message: 'Invalid context size',
       );
+    }
+    try {
+      final raw = await _channel
+          .invokeMapMethod<String, dynamic>('startServer', <String, dynamic>{
+            'modelPath': modelPath,
+            'port': port,
+            if (contextTokens != null) 'contextTokens': contextTokens,
+            if (apiKey != null && apiKey.isNotEmpty) 'apiKey': apiKey,
+            'idleMinutes': idleMinutes,
+            'batteryStopPct': batteryStopPercent,
+            'thermalStop': thermalStop,
+          });
       return NativeServerResponse.fromMap(raw);
     } on PlatformException catch (e) {
       return NativeServerResponse(
@@ -118,7 +131,9 @@ class NativeServerBridge implements ServerBridge {
   @override
   Future<Map<String, dynamic>?> getDeviceMetrics() async {
     try {
-      return await _channel.invokeMapMethod<String, dynamic>('getDeviceMetrics');
+      return await _channel.invokeMapMethod<String, dynamic>(
+        'getDeviceMetrics',
+      );
     } on PlatformException {
       return null;
     }
@@ -131,14 +146,12 @@ class NativeServerBridge implements ServerBridge {
     String? tunnelToken,
   }) async {
     try {
-      final raw = await _channel.invokeMapMethod<String, dynamic>(
-        'startTunnel',
-        <String, dynamic>{
-          'port': port,
-          if (tunnelUrl != null) 'tunnelUrl': tunnelUrl,
-          if (tunnelToken != null) 'tunnelToken': tunnelToken,
-        },
-      );
+      final raw = await _channel
+          .invokeMapMethod<String, dynamic>('startTunnel', <String, dynamic>{
+            'port': port,
+            if (tunnelUrl != null) 'tunnelUrl': tunnelUrl,
+            if (tunnelToken != null) 'tunnelToken': tunnelToken,
+          });
       return NativeTunnelResponse.fromMap(raw);
     } on PlatformException catch (e) {
       return NativeTunnelResponse(
