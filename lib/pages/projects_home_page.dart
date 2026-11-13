@@ -13,13 +13,21 @@ import 'deployment_page.dart';
 import 'host_project_wizard.dart';
 import 'hosted_account_page.dart';
 import 'service_detail_page.dart';
+import '../screens/ai_server_shell.dart';
 
 /// Projects dashboard — visual match for the buildify HTML mock.
 class ProjectsHomePage extends ConsumerStatefulWidget {
-  const ProjectsHomePage({super.key, this.onRunAiModel});
+  const ProjectsHomePage({
+    super.key,
+    this.onRunAiModel,
+    this.onOpenAiServer,
+  });
 
   /// Navigates to the existing AI server shell without coupling imports.
   final VoidCallback? onRunAiModel;
+
+  /// Navigates to the AI server shell and model setup assistant.
+  final VoidCallback? onOpenAiServer;
 
   @override
   ConsumerState<ProjectsHomePage> createState() => _ProjectsHomePageState();
@@ -264,6 +272,19 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                   builder: (_) => const HostProjectSourcePage(),
                 ),
               );
+            },
+            onOpenAiAssistant: () {
+              Navigator.pop(ctx);
+              if (widget.onOpenAiServer != null) {
+                widget.onOpenAiServer!();
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AiServerShell(),
+                  ),
+                );
+              }
             },
             onRunAiModel: () {
               Navigator.pop(ctx);
@@ -1311,10 +1332,12 @@ class _NewServiceModal extends StatelessWidget {
   const _NewServiceModal({
     required this.onHostProject,
     required this.onRunAiModel,
+    this.onOpenAiAssistant,
   });
 
   final VoidCallback onHostProject;
   final VoidCallback onRunAiModel;
+  final VoidCallback? onOpenAiAssistant;
 
   @override
   Widget build(BuildContext context) {
@@ -1397,6 +1420,23 @@ class _NewServiceModal extends StatelessWidget {
                   subtitle:
                       'Deploy web applications (Node.js, Python, Flask, Static HTML)',
                   onTap: onHostProject,
+                ),
+                const SizedBox(height: 12),
+                _ModalOption(
+                  icon: Icons.auto_awesome_outlined,
+                  label: 'model setup assistant',
+                  subtitle:
+                      'Guided AI server setup, hardware tuning & public sharing',
+                  onTap: onOpenAiAssistant ??
+                      () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => const AiServerShell(),
+                          ),
+                        );
+                      },
                 ),
                 const SizedBox(height: 12),
                 _ModalOption(
