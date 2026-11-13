@@ -36,13 +36,13 @@ void main() {
       (WidgetTester tester) async {
         // 1. Start on the actual app route (ProjectsHomePage)
         await tester.pumpWidget(createTestApp());
-        await tester.pumpAndSettle();
+        await pumpNavigationTransition(tester);
 
         // 2. Locate and tap "+ Add New" button on ProjectsHomePage
         final addNewFinder = find.text('+ Add New');
         expect(addNewFinder, findsOneWidget, reason: 'Must have "+ Add New" button on Home');
         await tester.tap(addNewFinder);
-        await tester.pumpAndSettle();
+        await pumpNavigationTransition(tester);
 
         // 3. Verify modal options
         expect(find.text('select service type'), findsOneWidget);
@@ -76,7 +76,7 @@ void main() {
       'Navigates from AiModelSelectPage banner to AiServerShell',
       (WidgetTester tester) async {
         await tester.pumpWidget(createTestApp(home: const AiModelSelectPage()));
-        await tester.pumpAndSettle();
+        await pumpNavigationTransition(tester);
 
         // Verify model setup assistant banner is present on the model select page
         expect(find.text('model setup assistant'), findsOneWidget);
