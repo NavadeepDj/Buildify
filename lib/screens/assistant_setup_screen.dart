@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../assistant/model_operations.dart';
 import '../assistant/model_recommendation.dart';
 import '../assistant/setup_controller.dart';
+import '../assistant/cloud_intent.dart';
+import '../models/ai_server_models.dart';
+import '../providers/hosted_account_provider.dart';
 import '../providers/ai_server_provider.dart';
 
 class AssistantSetupScreen extends ConsumerStatefulWidget {
@@ -17,29 +20,181 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
   ModelPreference preference = ModelPreference.balanced;
   String task = 'short_answers';
   bool stopExisting = false;
+  final request = TextEditingController();
+  final List<IntentMessage> conversation = [];
+  CloudIntent? intent;
+  String? cloudMessage;
+  bool interpreting = false;
+  int generation = 0;
+
+  @override
+  void dispose() {
+    generation++;
+    request.dispose();
+    super.dispose();
+  }
+
+  Future<void> sendRequest() async {
+    final text = request.text.trim();
+    if (text.isEmpty || interpreting) return;
+    final service = ref.read(cloudIntentServiceProvider);
+    if (service == null) {
+      setState(
+        () =>
+            cloudMessage =
+                'Cloud assistant is not configured in this build. Use the setup controls below.',
+      );
+      return;
+    }
+    final current = ++generation;
+    // Failed turns are not added to history, so retry never creates two user turns.
+    final messages = [...conversation, IntentMessage('user', text)];
+    setState(() {
+      interpreting = true;
+      intent = null;
+      cloudMessage = null;
+    });
+    try {
+      final result = await service.interpret(messages);
+      if (!mounted || current != generation) return;
+      setState(() {
+        conversation.addAll([
+          IntentMessage('user', text),
+          IntentMessage('assistant', result.reply),
+        ]);
+        intent = result;
+        request.clear();
+      });
+    } catch (error) {
+      if (!mounted || current != generation) return;
+      setState(
+        () =>
+            cloudMessage =
+                error is IntentFailure
+                    ? error.message
+                    : 'Cloud assistant unavailable. Use the setup controls below.',
+      );
+    } finally {
+      if (mounted && current == generation) {
+        setState(() => interpreting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(hostedAccountProvider, (previous, next) {
+      if (previous?.asData?.value?.id != next.asData?.value?.id) {
+        setState(() {
+          generation++;
+          conversation.clear();
+          intent = null;
+          interpreting = false;
+          cloudMessage = null;
+          request.clear();
+        });
+      }
+    });
     final state = ref.watch(assistantSetupProvider);
     final controller = ref.read(assistantSetupProvider.notifier);
     final host = ref.watch(aiServerProvider);
     final plan = state.plan;
     final candidate = state.candidate;
     final completed = state.record?.state == ModelOperationState.succeeded;
+    final connectionActive =
+        completed &&
+        host.status == ServerStatus.running &&
+        host.selectedModelId == plan?.modelId &&
+        ref.read(aiServerProvider.notifier).apiBaseUrl == state.endpoint;
     return Scaffold(
       appBar: AppBar(title: const Text('Model setup assistant')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Text(
-            'Choose what you need',
+            'What would you like to run?',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
           const Text(
-            'This guided setup checks resources, prepares a plan and tests the model. Cloud conversation will be available when its service is configured.',
+            'Describe your task. The assistant suggests settings, then this device checks resources and prepares a plan for your approval.',
           ),
+          const SizedBox(height: 12),
+          const Text(
+            'Your messages are sent to the cloud assistant. Avoid secrets. Model files and device paths are not sent. Conversation stays in this screen only.',
+          ),
+          for (final message in conversation)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '${message.role == 'user' ? 'You' : 'Assistant'}: ${message.text}',
+              ),
+            ),
+          TextField(
+            controller: request,
+            enabled: !state.busy && !interpreting,
+            maxLength: 1500,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Your request',
+              hintText: 'Run a fast model for short answers on this laptop',
+            ),
+          ),
+          FilledButton(
+            onPressed:
+                state.busy || interpreting || conversation.length >= 8
+                    ? null
+                    : sendRequest,
+            child: Text(
+              interpreting ? 'Understanding your request…' : 'Ask assistant',
+            ),
+          ),
+          if (cloudMessage != null) Text(cloudMessage!),
+          if (intent?.canPrepare == true)
+            OutlinedButton(
+              onPressed:
+                  state.busy || interpreting
+                      ? null
+                      : () {
+                        final suggestion = intent!;
+                        setState(() {
+                          task = suggestion.task;
+                          preference = suggestion.preference;
+                          intent = null;
+                        });
+                        controller.prepare(
+                          task: task,
+                          preference: preference,
+                          stopExisting: stopExisting,
+                        );
+                      },
+              child: Text(
+                'Prepare suggested plan (${switch (intent!.task) {
+                  'reasoning' => 'Reasoning',
+                  'multilingual' => 'Multilingual answers',
+                  _ => 'Short answers',
+                }}, ${intent!.preference.name})',
+              ),
+            ),
+          if (conversation.isNotEmpty)
+            TextButton(
+              onPressed:
+                  state.busy || interpreting
+                      ? null
+                      : () => setState(() {
+                        generation++;
+                        conversation.clear();
+                        intent = null;
+                        cloudMessage = null;
+                        request.clear();
+                      }),
+              child: const Text('Start a new conversation'),
+            ),
           const SizedBox(height: 20),
+          const Text('Setup controls'),
           DropdownButtonFormField<String>(
+            key: ValueKey(task),
             initialValue: task,
             decoration: const InputDecoration(labelText: 'Task'),
             items: const [
@@ -129,8 +284,10 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
                           ? 'Current model may be stopped.'
                           : 'An active model will block setup.',
                     ),
-                    const Text(
-                      'Host must remain available. Startup compatibility is not yet verified.',
+                    Text(
+                      completed
+                          ? 'Startup and a real inference request passed during this setup. Host must remain available.'
+                          : 'Host must remain available. Startup compatibility is not yet verified.',
                     ),
                     const SizedBox(height: 14),
                     if (!state.busy && !completed)
@@ -160,7 +317,9 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
           if (completed && state.endpoint != null) ...[
             const SizedBox(height: 18),
             Text(
-              'Connection ready',
+              connectionActive
+                  ? 'Connection ready'
+                  : 'Last verified connection (model is not currently active)',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             SelectableText('${state.endpoint}/v1'),
@@ -183,7 +342,10 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
               label: const Text('Copy base URL'),
             ),
             OutlinedButton(
-              onPressed: () => ref.read(aiServerProvider.notifier).stopServer(),
+              onPressed:
+                  connectionActive
+                      ? () => ref.read(aiServerProvider.notifier).stopServer()
+                      : null,
               child: const Text('Stop model'),
             ),
           ],
