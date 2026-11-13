@@ -60,43 +60,52 @@ final backendStateProvider = StreamProvider<BackendState>((ref) {
 });
 
 class AiServerController extends StateNotifier<AiServerState> {
-  AiServerController({this.liveUrls, ServerBridge? bridge})
-    : _native = bridge ?? createServerBridge(),
-      super(
-        AiServerState(
-          models: const [],
-          downloads: {},
-          device: DeviceSnapshot(
-            ramGb: Platform.isWindows ? 0 : 8,
-            availRamGb: Platform.isWindows ? 0 : 4.0,
-            freeStorageGb: Platform.isWindows ? 0 : 43.6,
-            batteryPercent: Platform.isWindows ? 100 : 72,
-            batteryCharging: Platform.isWindows,
-            ipAddress: Platform.isWindows ? '127.0.0.1' : '192.168.0.121',
-            tailscaleIp: null,
-            cpuLabel: Platform.isWindows ? 'Windows' : '8-core ARM',
-          ),
-          selectedModelId: '',
-          status: ServerStatus.stopped,
-          port: 8080,
-          requestCount: 0,
-          requestsPerSecond: 0,
-          uptime: Duration.zero,
-          lowPowerMode: false,
-          temperature: 0.7,
-          tokenLimit: 100,
-          logs: [
-            ServerLog(
-              'runtime ready: waiting for model selection',
-              LogType.system,
-            ),
-          ],
-          chat: const [],
-          security: SecuritySettings.empty,
-          tunnel: const TunnelState(status: TunnelStatus.stopped),
-        ),
-      ) {
-    unawaited(_loadCatalogAndHydrate());
+  AiServerController({
+    this.liveUrls,
+    ServerBridge? bridge,
+    FlutterSecureStorage? secureStorage,
+    bool initialize = true,
+  }) : _native = bridge ?? createServerBridge(),
+       _secure =
+           secureStorage ??
+           const FlutterSecureStorage(
+             aOptions: AndroidOptions(encryptedSharedPreferences: true),
+           ),
+       super(
+         AiServerState(
+           models: const [],
+           downloads: {},
+           device: DeviceSnapshot(
+             ramGb: Platform.isWindows ? 0 : 8,
+             availRamGb: Platform.isWindows ? 0 : 4.0,
+             freeStorageGb: Platform.isWindows ? 0 : 43.6,
+             batteryPercent: Platform.isWindows ? 100 : 72,
+             batteryCharging: Platform.isWindows,
+             ipAddress: Platform.isWindows ? '127.0.0.1' : '192.168.0.121',
+             tailscaleIp: null,
+             cpuLabel: Platform.isWindows ? 'Windows' : '8-core ARM',
+           ),
+           selectedModelId: '',
+           status: ServerStatus.stopped,
+           port: 8080,
+           requestCount: 0,
+           requestsPerSecond: 0,
+           uptime: Duration.zero,
+           lowPowerMode: false,
+           temperature: 0.7,
+           tokenLimit: 100,
+           logs: [
+             ServerLog(
+               'runtime ready: waiting for model selection',
+               LogType.system,
+             ),
+           ],
+           chat: const [],
+           security: SecuritySettings.empty,
+           tunnel: const TunnelState(status: TunnelStatus.stopped),
+         ),
+       ) {
+    if (initialize) unawaited(_loadCatalogAndHydrate());
   }
 
   final LiveUrlService? liveUrls;
@@ -105,6 +114,35 @@ class AiServerController extends StateNotifier<AiServerState> {
   Timer? _namedUrlTimer;
   int _namedUrlEpoch = 0;
   bool _namedUrlBusy = false;
+  ModelAccessScope _modelAccessScope = ModelAccessScope.deviceNetwork;
+  ModelAccessScope get modelAccessScope => _modelAccessScope;
+  String? _runningApiKey;
+  int _publicationRevision = 0;
+
+  bool get _canPublishModel =>
+      state.status == ServerStatus.running &&
+      _modelAccessScope == ModelAccessScope.public &&
+      state.security.requireApiKey &&
+      state.security.apiKey.isNotEmpty &&
+      _runningApiKey == state.security.apiKey;
+
+  Future<void> setModelAccessScope(ModelAccessScope scope) async {
+    if (scope == ModelAccessScope.public &&
+        (!state.security.requireApiKey || state.security.apiKey.isEmpty)) {
+      throw StateError('Configure API-key protection before public sharing.');
+    }
+    if (scope == ModelAccessScope.deviceNetwork) {
+      // Revoke in memory before any asynchronous storage or shutdown work.
+      _modelAccessScope = scope;
+      _publicationRevision++;
+      stopNamedTunnel();
+      await stopTunnel();
+    }
+    await _secure.write(key: _kModelAccessScope, value: scope.name);
+    _modelAccessScope = scope;
+    _publicationRevision++;
+    state = state.copyWith();
+  }
 
   Future<bool> _namedUrlHealthy(String url) async {
     try {
@@ -118,6 +156,11 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<void> startNamedTunnel(String projectName) async {
+    if (!_canPublishModel) {
+      throw StateError(
+        'Public sharing requires an approved scope and a restarted, key-protected model.',
+      );
+    }
     if (_namedUrlBusy || namedUrlStatus == 'Live') return;
     final urls = liveUrls;
     if (urls == null) throw StateError('Project gateway unavailable');
@@ -135,21 +178,27 @@ class AiServerController extends StateNotifier<AiServerState> {
     state = state.copyWith();
     try {
       namedUrl = await urls.registerAiRoute(projectName, state.port);
-      if (epoch != _namedUrlEpoch || state.status != ServerStatus.running) {
+      if (!_canPublishModel ||
+          epoch != _namedUrlEpoch ||
+          state.status != ServerStatus.running) {
         urls.unregisterAiRoute();
         return;
       }
       await urls.gateway.start(urls.routerPort);
       var healthy = false;
       for (var attempt = 0; attempt < 6; attempt++) {
-        if (epoch != _namedUrlEpoch || state.status != ServerStatus.running) {
+        if (!_canPublishModel ||
+            epoch != _namedUrlEpoch ||
+            state.status != ServerStatus.running) {
           return;
         }
         healthy = await _namedUrlHealthy(namedUrl!);
         if (healthy) break;
         await Future<void>.delayed(const Duration(seconds: 2));
       }
-      if (epoch != _namedUrlEpoch || state.status != ServerStatus.running) {
+      if (!_canPublishModel ||
+          epoch != _namedUrlEpoch ||
+          state.status != ServerStatus.running) {
         return;
       }
       if (!healthy) {
@@ -224,8 +273,8 @@ class AiServerController extends StateNotifier<AiServerState> {
       LogType.system,
     );
     unawaited(_loadCustomModels());
+    await _loadSecuritySettings();
     unawaited(_hydrateNativeState());
-    unawaited(_loadSecuritySettings());
   }
 
   final _discoveryBeacon = BuildifyDiscoveryBeacon();
@@ -288,9 +337,8 @@ class AiServerController extends StateNotifier<AiServerState> {
   String? _modelBasePath;
   final Map<String, http.Client> _downloadClients = {};
   final Map<String, StreamSubscription<List<int>>> _downloadSubs = {};
-  final FlutterSecureStorage _secure = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  final FlutterSecureStorage _secure;
+  static const _kModelAccessScope = 'model_access_scope';
 
   static const _kSecRequire = 'sec_require_api_key';
   static const _kSecApiKey = 'sec_api_key';
@@ -366,6 +414,16 @@ class AiServerController extends StateNotifier<AiServerState> {
       );
     }
     await _scanExistingModels();
+    if (!_canPublishModel) {
+      liveUrls?.unregisterAiRoute();
+      final existingTunnel = await _native.getTunnelStatus();
+      if (existingTunnel != null &&
+          !existingTunnel.isGateway &&
+          (existingTunnel.status == 'running' ||
+              existingTunnel.status == 'starting')) {
+        await _native.stopTunnel();
+      }
+    }
     if (state.status == ServerStatus.running) {
       unawaited(_autoConnectNamedTunnel());
     }
@@ -413,6 +471,11 @@ class AiServerController extends StateNotifier<AiServerState> {
       final battery =
           int.tryParse((await _secure.read(key: _kSecBatteryPct)) ?? '') ?? 0;
       final thermal = (await _secure.read(key: _kSecThermal)) != '0';
+      final savedScope = await _secure.read(key: _kModelAccessScope);
+      _modelAccessScope =
+          savedScope == ModelAccessScope.public.name && require
+              ? ModelAccessScope.public
+              : ModelAccessScope.deviceNetwork;
       state = state.copyWith(
         security: SecuritySettings(
           requireApiKey: require,
@@ -447,6 +510,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<void> setRequireApiKey(bool value) async {
+    if (!value) await setModelAccessScope(ModelAccessScope.deviceNetwork);
     state = state.copyWith(
       security: state.security.copyWith(requireApiKey: value),
     );
@@ -461,6 +525,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<void> regenerateApiKey() async {
+    await setModelAccessScope(ModelAccessScope.deviceNetwork);
     final next = _generateApiKey();
     state = state.copyWith(security: state.security.copyWith(apiKey: next));
     await _secure.write(key: _kSecApiKey, value: next);
@@ -764,6 +829,7 @@ class AiServerController extends StateNotifier<AiServerState> {
       thermalStop: sec.thermalStop,
     );
     if (!response.ok) {
+      _runningApiKey = null;
       state = state.copyWith(status: ServerStatus.stopped);
       _appendLog('native start failed: ${response.message}', LogType.warning);
       return;
@@ -791,6 +857,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     live ??= await _native.getServerStatus();
 
     if (live == null || live.status != 'running') {
+      _runningApiKey = null;
       state = state.copyWith(status: ServerStatus.stopped);
       final err = live?.lastError;
       _appendLog(
@@ -802,6 +869,7 @@ class AiServerController extends StateNotifier<AiServerState> {
       return;
     }
 
+    _runningApiKey = sec.requireApiKey ? sec.apiKey : null;
     _startedAt = DateTime.now();
     _uptimeTimer?.cancel();
     var ticks = 0;
@@ -822,6 +890,7 @@ class AiServerController extends StateNotifier<AiServerState> {
           stopNamedTunnel();
           _discoveryBeacon.stop();
           _startedAt = null;
+          _runningApiKey = null;
           state = state.copyWith(
             status: ServerStatus.stopped,
             uptime: Duration.zero,
@@ -868,6 +937,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<void> _autoConnectNamedTunnel() async {
+    if (!_canPublishModel) return;
     final urls = liveUrls;
     if (urls == null) return;
     try {
@@ -887,7 +957,10 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<void> _refreshNamedTunnel() async {
-    if (!mounted || state.status != ServerStatus.running || _namedUrlBusy) {
+    if (!_canPublishModel ||
+        !mounted ||
+        state.status != ServerStatus.running ||
+        _namedUrlBusy) {
       return;
     }
     final epoch = _namedUrlEpoch;
@@ -929,6 +1002,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     _uptimeTimer?.cancel();
     _discoveryBeacon.stop();
     _startedAt = null;
+    _runningApiKey = null;
     state = state.copyWith(
       status: ServerStatus.stopped,
       uptime: Duration.zero,
@@ -938,6 +1012,14 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   Future<bool> startTunnel() async {
+    if (!_canPublishModel) {
+      _appendLog(
+        'Public sharing needs an approved scope and active API-key protection.',
+        LogType.warning,
+      );
+      return false;
+    }
+    final publicationRevision = _publicationRevision;
     if (namedUrlStatus == 'Live' || namedUrlStatus == 'Connecting') {
       _appendLog(
         'The project subdomain is managed automatically with the AI server.',
@@ -961,6 +1043,13 @@ class AiServerController extends StateNotifier<AiServerState> {
       LogType.system,
     );
     final response = await _native.startTunnel(port: state.port);
+    if (!_canPublishModel || publicationRevision != _publicationRevision) {
+      await _native.stopTunnel();
+      state = state.copyWith(
+        tunnel: const TunnelState(status: TunnelStatus.stopped),
+      );
+      return false;
+    }
     if (!response.ok) {
       state = state.copyWith(
         tunnel: TunnelState(
@@ -1001,9 +1090,17 @@ class AiServerController extends StateNotifier<AiServerState> {
       return;
     }
     Future.delayed(const Duration(seconds: 2), () async {
-      if (!mounted || state.tunnel.status != TunnelStatus.starting) return;
+      if (!_canPublishModel ||
+          !mounted ||
+          state.tunnel.status != TunnelStatus.starting) {
+        return;
+      }
       final live = await _native.getTunnelStatus();
-      if (!mounted || state.tunnel.status != TunnelStatus.starting) return;
+      if (!_canPublishModel ||
+          !mounted ||
+          state.tunnel.status != TunnelStatus.starting) {
+        return;
+      }
       if (live == null) {
         if (state.tunnel.status == TunnelStatus.starting) {
           state = state.copyWith(

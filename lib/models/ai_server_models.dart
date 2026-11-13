@@ -2,6 +2,9 @@ import 'model_requirements.dart';
 
 enum ServerStatus { stopped, starting, running, stopping }
 
+/// Device/LAN binding is platform-specific; this only governs public tunnels.
+enum ModelAccessScope { deviceNetwork, public }
+
 enum TunnelStatus { stopped, starting, running, failed }
 
 enum ModelDownloadStatus { notDownloaded, downloading, downloaded }
