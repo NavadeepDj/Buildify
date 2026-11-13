@@ -6,6 +6,7 @@ import 'pages/ai_model_select_page.dart';
 import 'pages/hosted_account_page.dart';
 import 'pages/projects_home_page.dart';
 import 'pages/verification_page.dart';
+import 'screens/ai_server_shell.dart';
 import 'theme/app_palette.dart';
 import 'providers/hosted_account_provider.dart';
 import 'providers/management_account_provider.dart';
@@ -120,6 +121,12 @@ class BuildifyApp extends ConsumerWidget {
             settings: settings,
           );
         }
+        if (uri.path == '/ai-server' || uri.path == '/ai-assistant') {
+          return MaterialPageRoute<void>(
+            builder: (_) => const AiServerShell(),
+            settings: settings,
+          );
+        }
         if (uri.path == '/projects') {
           return MaterialPageRoute<void>(
             builder:
@@ -128,6 +135,12 @@ class BuildifyApp extends ConsumerWidget {
                       () => Navigator.of(ctx).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const AiModelSelectPage(),
+                        ),
+                      ),
+                  onOpenAiServer:
+                      () => Navigator.of(ctx).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AiServerShell(),
                         ),
                       ),
                 ),
@@ -143,6 +156,12 @@ class BuildifyApp extends ConsumerWidget {
                           () => Navigator.of(ctx).push(
                             MaterialPageRoute<void>(
                               builder: (_) => const AiModelSelectPage(),
+                            ),
+                          ),
+                      onOpenAiServer:
+                          () => Navigator.of(ctx).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AiServerShell(),
                             ),
                           ),
                     ),

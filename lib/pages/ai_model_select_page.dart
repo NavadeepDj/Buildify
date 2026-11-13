@@ -11,6 +11,7 @@ import '../providers/ai_server_provider.dart';
 import '../services/guided_tour_service.dart';
 import '../services/hf_service.dart';
 import '../widgets/guided_tour_overlay.dart';
+import '../screens/ai_server_shell.dart';
 import 'service_detail_page.dart';
 
 /// Model picker — matches the "select ai model" HTML screen.
@@ -210,7 +211,15 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
                           ),
                         ),
                         _HeaderSection(),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 24),
+                        _AssistantSetupBanner(
+                          onOpenAssistant: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AiServerShell(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                         _SearchAndFilters(
                           key: _searchFilterKey,
                           controller: _searchController,
@@ -1794,6 +1803,108 @@ class _FileRow extends StatelessWidget {
           onPressed: onDownload,
         ),
       ]),
+    );
+  }
+}
+
+class _AssistantSetupBanner extends StatelessWidget {
+  const _AssistantSetupBanner({required this.onOpenAssistant});
+
+  final VoidCallback onOpenAssistant;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF10B981).withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.auto_awesome,
+              color: Color(0xFF10B981),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'model setup assistant',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'GUIDED',
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF10B981),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Want guidance? Launch the assistant to review your setup plan and sharing options before downloading any weights.',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 11,
+                    color: _SelectPalette.textDim,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            onPressed: onOpenAssistant,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'OPEN',
+              style: GoogleFonts.spaceMono(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
