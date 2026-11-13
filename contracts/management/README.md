@@ -7,6 +7,10 @@ the private backend and does not claim the endpoints are deployed.
 - `openapi.json`: routes, wire fields, schemas, authentication and errors.
 - `generated/management.d.ts`: generated TypeScript types; do not edit by hand.
 - `test/`: examples of accepted and rejected wire payloads.
+- `devices/openapi.json` and `generated/devices.d.ts`: separate **proposed,
+  unimplemented** #84 enrollment interface. See the
+  [device lifecycle and handoff](../../docs/api/device-enrollment-v1.md).
+  Its presence does not change the reviewed foundation or deployed backend pin.
 - [Foundation policy](../../docs/api/management-v1.md): ownership, CORS, limits,
   redaction, release gates and authentication requirements.
 
@@ -23,6 +27,9 @@ To intentionally change the contract, edit `openapi.json`, run `npm run generate
 review and commit the generated diff, then run `npm run check` again. CI checks
 OpenAPI validity, wire examples and generated-file drift. This is not a substitute
 for private backend authentication/authorization and integration tests.
+
+The lint/generate/check commands also cover the separate device proposal. Edit
+`devices/openapi.json` for enrollment changes; never edit generated types by hand.
 
 The lockfile pins the toolchain. A scoped `minimatch` override for
 `openapi-typescript` selects patched version 11.0.1 for GHSA-g3hv-75wg-m249; the
