@@ -209,6 +209,7 @@ class DesktopServerBridge implements ServerBridge {
   Future<NativeServerResponse> startServer({
     required String modelPath,
     required int port,
+    int? contextTokens,
     String? apiKey,
     int idleMinutes = 0,
     int batteryStopPercent = 0,
@@ -218,12 +219,14 @@ class DesktopServerBridge implements ServerBridge {
         modelPath,
         port,
         apiKey,
+        contextTokens,
       ).whenComplete(() => _serverStarting = null);
 
   Future<NativeServerResponse> _startServer(
     String modelPath,
     int port,
     String? apiKey,
+    int? contextTokens,
   ) async {
     if (_serverProc != null) {
       return NativeServerResponse(
@@ -235,7 +238,11 @@ class DesktopServerBridge implements ServerBridge {
     _serverError = null;
     _serverPort = port;
 
-    if (port < 1 || port > 65535 || !File(modelPath).existsSync()) {
+    if (port < 1 ||
+        port > 65535 ||
+        !File(modelPath).existsSync() ||
+        (contextTokens != null &&
+            (contextTokens < 128 || contextTokens > 8192))) {
       _serverError = 'model file not found: $modelPath';
       return NativeServerResponse(
         ok: false,
@@ -260,6 +267,7 @@ class DesktopServerBridge implements ServerBridge {
         '127.0.0.1',
         '--port',
         '$port',
+        if (contextTokens != null) ...['--ctx-size', '$contextTokens'],
         if (apiKey != null && apiKey.isNotEmpty) ...['--api-key', apiKey],
       ];
       final process = await _startProcess(
