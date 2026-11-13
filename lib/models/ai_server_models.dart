@@ -1,3 +1,5 @@
+import 'model_requirements.dart';
+
 enum ServerStatus { stopped, starting, running, stopping }
 
 enum TunnelStatus { stopped, starting, running, failed }
@@ -15,6 +17,7 @@ class ModelProfile {
     required this.quality,
     required this.requiredRamGb,
     required this.description,
+    this.requirements,
   });
 
   final String id;
@@ -26,6 +29,7 @@ class ModelProfile {
   final String quality;
   final int requiredRamGb;
   final String description;
+  final ModelRequirements? requirements;
 
   factory ModelProfile.fromJson(Map<String, dynamic> json) {
     String str(String key, [String fallback = '']) {
@@ -51,6 +55,7 @@ class ModelProfile {
       quality: str('quality'),
       requiredRamGb: intVal('requiredRamGb'),
       description: str('description'),
+      requirements: ModelRequirements.tryParse(json['requirements']),
     );
   }
 }
@@ -115,11 +120,7 @@ class DeviceSnapshot {
 }
 
 class TunnelState {
-  const TunnelState({
-    required this.status,
-    this.publicUrl,
-    this.lastError,
-  });
+  const TunnelState({required this.status, this.publicUrl, this.lastError});
 
   final TunnelStatus status;
   final String? publicUrl;
