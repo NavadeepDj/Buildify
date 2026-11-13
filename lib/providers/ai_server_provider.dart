@@ -15,14 +15,21 @@ import '../services/server_bridge_factory.dart';
 import '../services/mdns_service.dart';
 import '../services/live_url_service.dart';
 import '../backend/embedded_backend.dart';
+import '../assistant/host_inspection_service.dart';
+import '../assistant/inspection_tools.dart';
 
 const _catalogRemoteUrl =
     'https://raw.githubusercontent.com/Sujith8257/Buildify/main/assets/models/catalog.json';
+
+final serverBridgeProvider = Provider<ServerBridge>(
+  (ref) => createServerBridge(),
+);
 
 final aiServerProvider =
     StateNotifierProvider<AiServerController, AiServerState>((ref) {
       return AiServerController(
         liveUrls: ref.watch(embeddedBackendProvider).liveUrls,
+        bridge: ref.watch(serverBridgeProvider),
       );
     });
 
@@ -30,6 +37,16 @@ final embeddedBackendProvider = Provider<EmbeddedBackendService>((ref) {
   final service = EmbeddedBackendService();
   ref.onDispose(() => service.dispose());
   return service;
+});
+
+/// Share the runtime bridge without initializing the controller: controller
+/// hydration can reconnect tunnels, so a read-only tool must not trigger it.
+final assistantInspectionToolsProvider = Provider<AssistantInspectionTools>((
+  ref,
+) {
+  return AssistantInspectionTools(
+    HostInspectionService(bridge: ref.watch(serverBridgeProvider)),
+  );
 });
 
 final backendProjectsProvider = StreamProvider<List<BackendProject>>((ref) {
@@ -43,8 +60,9 @@ final backendStateProvider = StreamProvider<BackendState>((ref) {
 });
 
 class AiServerController extends StateNotifier<AiServerState> {
-  AiServerController({this.liveUrls})
-    : super(
+  AiServerController({this.liveUrls, ServerBridge? bridge})
+    : _native = bridge ?? createServerBridge(),
+      super(
         AiServerState(
           models: const [],
           downloads: {},
@@ -266,7 +284,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   Timer? _uptimeTimer;
   Timer? _metricsTimer;
   DateTime? _startedAt;
-  final ServerBridge _native = createServerBridge();
+  final ServerBridge _native;
   String? _modelBasePath;
   final Map<String, http.Client> _downloadClients = {};
   final Map<String, StreamSubscription<List<int>>> _downloadSubs = {};

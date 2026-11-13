@@ -1,5 +1,10 @@
 # Buildify documentation
 
+[Assistant host inspection](assistant-host-inspection.md) documents the first
+Buildify AI foundation: fresh local measurements and read-only runtime tools.
+Track the model-first assistant roadmap in
+[epic #124](https://github.com/NavadeepDj/Buildify/issues/124).
+
 [Hosted development setup](hosted-development.md) covers creating the development
 project, applying the account migration, configuring verification mail, and
 running Flutter with validated public configuration.
