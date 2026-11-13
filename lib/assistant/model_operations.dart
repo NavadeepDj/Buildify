@@ -274,8 +274,9 @@ class ModelOperationExecutor {
       }
       return await record(ModelOperationState.succeeded);
     } on ModelOperationFailure catch (e) {
-      if (e.code == 'operation_id_conflict' || e.code == 'journal_unreadable')
+      if (e.code == 'operation_id_conflict' || e.code == 'journal_unreadable') {
         rethrow;
+      }
       if (cancellation.isCancelled || e.code == 'cancelled') {
         try {
           _cancelCleanup ??= Future<void>.sync(() => runtime.cancel(plan));
