@@ -19,9 +19,7 @@ void main() {
 
   Widget createTestApp({Widget? home}) {
     return ProviderScope(
-      child: MaterialApp(
-        home: home ?? const ProjectsHomePage(),
-      ),
+      child: MaterialApp(home: home ?? const ProjectsHomePage()),
     );
   }
 
@@ -38,10 +36,18 @@ void main() {
         await tester.pumpWidget(createTestApp());
         await pumpNavigationTransition(tester);
 
-        // 2. Locate and tap "+ Add New" button on ProjectsHomePage
-        final addNewFinder = find.text('+ Add New');
-        expect(addNewFinder, findsOneWidget, reason: 'Must have "+ Add New" button on Home');
-        await tester.tap(addNewFinder);
+        // 2. Scroll to the new service button below the project list.
+        final newServiceButton = find.text('new service');
+        await tester.scrollUntilVisible(
+          newServiceButton,
+          200,
+          scrollable: find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          ),
+        );
+        await tester.tap(newServiceButton.hitTestable());
         await pumpNavigationTransition(tester);
 
         // 3. Verify modal options
@@ -72,23 +78,22 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Navigates from AiModelSelectPage banner to AiServerShell',
-      (WidgetTester tester) async {
-        await tester.pumpWidget(createTestApp(home: const AiModelSelectPage()));
-        await pumpNavigationTransition(tester);
+    testWidgets('Navigates from AiModelSelectPage banner to AiServerShell', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(createTestApp(home: const AiModelSelectPage()));
+      await pumpNavigationTransition(tester);
 
-        // Verify model setup assistant banner is present on the model select page
-        expect(find.text('model setup assistant'), findsOneWidget);
-        expect(find.text('OPEN'), findsOneWidget);
+      // Verify model setup assistant banner is present on the model select page
+      expect(find.text('model setup assistant'), findsOneWidget);
+      expect(find.text('OPEN'), findsOneWidget);
 
-        // Tap OPEN button
-        await tester.tap(find.text('OPEN'));
-        await pumpNavigationTransition(tester);
+      // Tap OPEN button
+      await tester.tap(find.text('OPEN'));
+      await pumpNavigationTransition(tester);
 
-        // Verify AiServerShell is mounted
-        expect(find.byType(AiServerShell), findsOneWidget);
-      },
-    );
+      // Verify AiServerShell is mounted
+      expect(find.byType(AiServerShell), findsOneWidget);
+    });
   });
 }

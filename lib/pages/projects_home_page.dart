@@ -203,7 +203,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
       GuidedTourStep(
         title: 'Deploy & Host Services',
         description:
-            'Tap "+ Add New" to deploy a web app (Node.js, Python, Flask, Static) or launch a local AI model.',
+            'Tap "new service" to deploy a web app (Node.js, Python, Flask, Static) or launch a local AI model.',
         targetKey: _addServiceKey,
         tooltipPosition: TooltipPosition.bottom,
       ),
@@ -794,7 +794,7 @@ class _EnvironmentSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'No projects or active AI models found.\nTap "+ Add New" below to host a project or run an AI model.',
+                      'No projects or active AI models found.\nTap "new service" below to host a project or run an AI model.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.spaceMono(
                         fontSize: 12,
@@ -1356,112 +1356,114 @@ class _NewServiceModal extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'select service type',
-                        style: GoogleFonts.spaceMono(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
-                          color: _ProjectsPalette.primary,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(
-                        Icons.close,
-                        color: _ProjectsPalette.primary.withValues(alpha: 0.4),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
                     children: [
-                      const Icon(
-                        Icons.lightbulb_outline,
-                        color: Color(0xFF10B981),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Choose how you want to deploy on Buildify:',
+                          'select service type',
                           style: GoogleFonts.spaceMono(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF10B981),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                            color: _ProjectsPalette.primary,
                           ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          color: _ProjectsPalette.primary.withValues(alpha: 0.4),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 16),
-                _ModalOption(
-                  icon: Icons.rocket_launch_outlined,
-                  label: 'host a project',
-                  subtitle:
-                      'Deploy web applications (Node.js, Python, Flask, Static HTML)',
-                  onTap: onHostProject,
-                ),
-                const SizedBox(height: 12),
-                _ModalOption(
-                  icon: Icons.auto_awesome_outlined,
-                  label: 'model setup assistant',
-                  subtitle:
-                      'Guided AI server setup, hardware tuning & public sharing',
-                  onTap: onOpenAiAssistant ??
-                      () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => const AiServerShell(),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.lightbulb_outline,
+                          color: Color(0xFF10B981),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Choose how you want to deploy on Buildify:',
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF10B981),
+                            ),
                           ),
-                        );
-                      },
-                ),
-                const SizedBox(height: 12),
-                _ModalOption(
-                  icon: Icons.psychology_outlined,
-                  label: 'run an ai model',
-                  subtitle:
-                      'Launch a local GGUF AI model server (Llama 3 8B, etc.)',
-                  onTap: onRunAiModel,
-                ),
-                const SizedBox(height: 24),
-                Divider(color: Colors.white.withValues(alpha: 0.05)),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'cancel',
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                      color: _ProjectsPalette.primary.withValues(alpha: 0.4),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  _ModalOption(
+                    icon: Icons.rocket_launch_outlined,
+                    label: 'host a project',
+                    subtitle:
+                        'Deploy web applications (Node.js, Python, Flask, Static HTML)',
+                    onTap: onHostProject,
+                  ),
+                  const SizedBox(height: 12),
+                  _ModalOption(
+                    icon: Icons.auto_awesome_outlined,
+                    label: 'model setup assistant',
+                    subtitle:
+                        'Guided AI server setup, hardware tuning & public sharing',
+                    onTap: onOpenAiAssistant ??
+                        () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AiServerShell(),
+                            ),
+                          );
+                        },
+                  ),
+                  const SizedBox(height: 12),
+                  _ModalOption(
+                    icon: Icons.psychology_outlined,
+                    label: 'run an ai model',
+                    subtitle:
+                        'Launch a local GGUF AI model server (Llama 3 8B, etc.)',
+                    onTap: onRunAiModel,
+                  ),
+                  const SizedBox(height: 24),
+                  Divider(color: Colors.white.withValues(alpha: 0.05)),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'cancel',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: _ProjectsPalette.primary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

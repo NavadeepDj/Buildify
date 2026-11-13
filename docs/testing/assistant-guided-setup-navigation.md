@@ -8,7 +8,7 @@ This runbook unblocks the manual QA access gate for **Issue #145** / **PR #146**
 ## Primary Navigation Path (From App Home)
 
 1. **Launch Buildify** (Normal application launch on Windows Desktop or Android).
-2. On the **Projects Home Page** (`ProjectsHomePage`), tap the **`+ Add New`** button in the header.
+2. On the **Projects Home Page** (`ProjectsHomePage`), tap **`new service`** below the project list in the **production** section.
 3. The **"select service type"** modal dialog opens.
 4. Tap the **`model setup assistant`** option (highlighted with the sparkle `✨` icon: *"Guided AI server setup, hardware tuning & public sharing"*).
 5. **Expected Result:**
@@ -20,7 +20,7 @@ This runbook unblocks the manual QA access gate for **Issue #145** / **PR #146**
 
 ## Secondary Navigation Path (From Model Selection Screen)
 
-1. On the **Projects Home Page**, tap **`+ Add New`**.
+1. On the **Projects Home Page**, tap **`new service`** below the project list in the **production** section.
 2. Tap **`run an ai model`** (manual model catalog).
 3. At the top of `AiModelSelectPage` (below the header), locate the **`model setup assistant`** banner:
    - *"Want guidance? Launch the assistant to review your setup plan and sharing options before downloading any weights."*
