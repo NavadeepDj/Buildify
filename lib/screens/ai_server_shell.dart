@@ -8,6 +8,7 @@ import 'home_screen.dart';
 import 'model_store_screen.dart';
 import 'self_test_screen.dart';
 import 'network_screen.dart';
+import 'assistant_setup_screen.dart';
 
 class AiServerShell extends ConsumerStatefulWidget {
   const AiServerShell({super.key});
@@ -43,10 +44,9 @@ class _AiServerShellState extends ConsumerState<AiServerShell> {
           tooltipPosition: TooltipPosition.top,
         ),
       ];
-      ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
-            steps,
-            tourKey: 'buildify_tour_ai_shell',
-          );
+      ref
+          .read(guidedTourNotifierProvider.notifier)
+          .checkAndAutoStartTour(steps, tourKey: 'buildify_tour_ai_shell');
     });
   }
 
@@ -62,6 +62,18 @@ class _AiServerShellState extends ConsumerState<AiServerShell> {
     return GuidedTourOverlay(
       child: Scaffold(
         appBar: AppBar(
+          actions: [
+            IconButton(
+              tooltip: 'Model setup assistant',
+              icon: const Icon(Icons.auto_awesome_outlined),
+              onPressed:
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AssistantSetupScreen(),
+                    ),
+                  ),
+            ),
+          ],
           backgroundColor: AppPalette.bg,
           titleSpacing: 16,
           title: Row(

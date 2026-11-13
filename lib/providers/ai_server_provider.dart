@@ -148,6 +148,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   ModelAccessScope get modelAccessScope => _modelAccessScope;
   String? _runningApiKey;
   int _publicationRevision = 0;
+  Future<void> _scopeWrites = Future<void>.value();
 
   bool get _canPublishModel =>
       state.status == ServerStatus.running &&
@@ -161,16 +162,24 @@ class AiServerController extends StateNotifier<AiServerState> {
         (!state.security.requireApiKey || state.security.apiKey.isEmpty)) {
       throw StateError('Configure API-key protection before public sharing.');
     }
+    final revision = ++_publicationRevision;
+    // Preserve request order in storage as well as in memory.
+    final persist = _scopeWrites.then(
+      (_) => _secure.write(key: _kModelAccessScope, value: scope.name),
+    );
+    _scopeWrites = persist.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
     if (scope == ModelAccessScope.deviceNetwork) {
       // Revoke in memory before any asynchronous storage or shutdown work.
       _modelAccessScope = scope;
-      _publicationRevision++;
       stopNamedTunnel();
       await stopTunnel();
     }
-    await _secure.write(key: _kModelAccessScope, value: scope.name);
+    await persist;
+    if (revision != _publicationRevision) return;
     _modelAccessScope = scope;
-    _publicationRevision++;
     state = state.copyWith();
   }
 

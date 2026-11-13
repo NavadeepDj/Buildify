@@ -274,6 +274,7 @@ class ModelOperationExecutor {
       ]) {
         cancellation.check();
         await record(step.$1);
+        cancellation.check();
         await step.$2();
         cancellation.check();
       }
