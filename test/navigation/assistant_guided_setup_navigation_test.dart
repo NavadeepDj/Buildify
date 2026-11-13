@@ -25,6 +25,11 @@ void main() {
     );
   }
 
+  Future<void> pumpNavigationTransition(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
   group('Issue #145: Assistant Guided Setup Navigation Integration', () {
     testWidgets(
       'Navigates from ProjectsHomePage modal to AiServerShell and Network controls',
@@ -47,7 +52,7 @@ void main() {
 
         // 4. Tap "model setup assistant"
         await tester.tap(find.text('model setup assistant'));
-        await tester.pumpAndSettle();
+        await pumpNavigationTransition(tester);
 
         // 5. Verify AiServerShell is reached without modifying source or test-only routes
         expect(find.byType(AiServerShell), findsOneWidget);
@@ -59,7 +64,7 @@ void main() {
 
         // 6. Navigate to Network tab to verify deliberate public-sharing controls
         await tester.tap(find.text('Network'));
-        await tester.pumpAndSettle();
+        await pumpNavigationTransition(tester);
 
         expect(find.byType(NetworkScreen), findsOneWidget);
         expect(find.text('Cloudflare Tunnel'), findsOneWidget);
@@ -79,7 +84,7 @@ void main() {
 
         // Tap OPEN button
         await tester.tap(find.text('OPEN'));
-        await tester.pumpAndSettle();
+        await pumpNavigationTransition(tester);
 
         // Verify AiServerShell is mounted
         expect(find.byType(AiServerShell), findsOneWidget);
@@ -87,4 +92,3 @@ void main() {
     );
   });
 }
-
