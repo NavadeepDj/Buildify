@@ -24,6 +24,7 @@ class ModelOperationPlan {
     required this.downloadBytes,
     required this.scope,
     required this.stopExisting,
+    this.contextTokens = 2048,
     required DateTime createdAt,
     required DateTime expiresAt,
   }) : createdAt = createdAt.toUtc(),
@@ -32,12 +33,15 @@ class ModelOperationPlan {
         modelId.isEmpty ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch(artifactSha256) ||
         downloadBytes <= 0 ||
+        contextTokens < 128 ||
+        contextTokens > 8192 ||
         !expiresAt.isAfter(createdAt)) {
       throw ArgumentError('Invalid model plan');
     }
   }
   final String id, modelId, artifactSha256;
   final int downloadBytes;
+  final int contextTokens;
   final ModelAccessScope scope;
   final bool stopExisting;
   final DateTime createdAt, expiresAt;
@@ -46,6 +50,7 @@ class ModelOperationPlan {
     'modelId': modelId,
     'artifactSha256': artifactSha256,
     'downloadBytes': downloadBytes,
+    'contextTokens': contextTokens,
     'scope': scope.name,
     'stopExisting': stopExisting,
     'createdAt': createdAt.toIso8601String(),

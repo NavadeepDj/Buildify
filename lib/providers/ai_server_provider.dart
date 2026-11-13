@@ -17,6 +17,7 @@ import '../services/live_url_service.dart';
 import '../backend/embedded_backend.dart';
 import '../assistant/host_inspection_service.dart';
 import '../assistant/inspection_tools.dart';
+import '../assistant/host_inspection.dart';
 
 const _catalogRemoteUrl =
     'https://raw.githubusercontent.com/Sujith8257/Buildify/main/assets/models/catalog.json';
@@ -109,6 +110,35 @@ class AiServerController extends StateNotifier<AiServerState> {
   }
 
   final LiveUrlService? liveUrls;
+  AiServerState get snapshot => state;
+  Future<InspectionReading<AssistantDeviceCapabilities>>
+  inspectForAssistant() =>
+      HostInspectionService(bridge: _native).readDeviceCapabilities();
+
+  Future<File> modelArtifactForAssistant(String modelId) async {
+    final model = state.models.singleWhere((m) => m.id == modelId);
+    if (model.fileName.contains('/') ||
+        model.fileName.contains('\\') ||
+        !model.fileName.endsWith('.gguf')) {
+      throw StateError('Invalid model artifact');
+    }
+    _modelBasePath ??= await _native.getModelBasePath();
+    if (_modelBasePath == null || _modelBasePath!.isEmpty) {
+      throw StateError('Model storage unavailable');
+    }
+    return File('$_modelBasePath/${model.fileName}');
+  }
+
+  void acceptVerifiedArtifactForAssistant(String modelId) {
+    if (!state.models.any((m) => m.id == modelId)) {
+      throw StateError('Unknown model');
+    }
+    _setDownload(
+      modelId,
+      const ModelDownload(status: ModelDownloadStatus.downloaded, progress: 1),
+    );
+  }
+
   String? namedUrl;
   String namedUrlStatus = 'Stopped';
   Timer? _namedUrlTimer;
@@ -803,7 +833,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     _appendLog('download canceled: ${_modelName(modelId)}', LogType.warning);
   }
 
-  Future<void> startServer() async {
+  Future<void> startServer({int? contextTokens}) async {
     if (state.status == ServerStatus.running ||
         state.status == ServerStatus.starting) {
       return;
@@ -822,6 +852,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     final sec = state.security;
     final response = await _native.startServer(
       modelPath: _modelPathFor(selectedModel),
+      contextTokens: contextTokens,
       port: state.port,
       apiKey: sec.requireApiKey ? sec.apiKey : null,
       idleMinutes: sec.idleTimeoutMinutes,

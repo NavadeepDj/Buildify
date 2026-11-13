@@ -31,6 +31,11 @@ class MainActivity : FlutterActivity() {
                         val idleMinutes = call.argument<Int>("idleMinutes") ?: 0
                         val batteryStopPct = call.argument<Int>("batteryStopPct") ?: 0
                         val thermalStop = call.argument<Boolean>("thermalStop") ?: true
+                        val contextTokens = call.argument<Int>("contextTokens") ?: 0
+                        if (contextTokens != 0 && contextTokens !in 128..8192) {
+                            result.error("INVALID_ARGS", "Invalid context size", null)
+                            return@setMethodCallHandler
+                        }
                         if (modelPath.isNullOrBlank()) {
                             result.error("INVALID_ARGS", "modelPath is required", null)
                             return@setMethodCallHandler
@@ -43,6 +48,7 @@ class MainActivity : FlutterActivity() {
                             idleMinutes = idleMinutes,
                             batteryStopPct = batteryStopPct,
                             thermalStop = thermalStop,
+                            contextTokens = contextTokens,
                         )
                         result.success(
                             mapOf(

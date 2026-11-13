@@ -41,6 +41,7 @@ class AiServerService : Service() {
                 val idleMinutes = intent.getIntExtra(EXTRA_IDLE_MINUTES, 0)
                 val batteryStop = intent.getIntExtra(EXTRA_BATTERY_STOP_PCT, 0)
                 val thermalStop = intent.getBooleanExtra(EXTRA_THERMAL_STOP, true)
+                val contextTokens = intent.getIntExtra("contextTokens", 0)
 
                 cleanupScheduled.set(false)
                 killServerProcess()
@@ -57,7 +58,7 @@ class AiServerService : Service() {
 
                 startForeground(NOTIFICATION_ID, createNotification(port, ServerStatus.STARTING))
                 registerSafetyHooks()
-                executor.execute { runLlamaServer(modelPath, port, apiKey) }
+                executor.execute { runLlamaServer(modelPath, port, apiKey, contextTokens) }
             }
 
             ACTION_STOP -> {
@@ -79,7 +80,7 @@ class AiServerService : Service() {
         super.onDestroy()
     }
 
-    private fun runLlamaServer(modelPath: String, port: Int, apiKey: String?) {
+    private fun runLlamaServer(modelPath: String, port: Int, apiKey: String?, contextTokens: Int) {
         try {
             val install =
                 LlamaServerBinary.prepare(this)
@@ -107,6 +108,10 @@ class AiServerService : Service() {
             if (!apiKey.isNullOrBlank()) {
                 args += "--api-key"
                 args += apiKey
+            }
+            if (contextTokens in 128..8192) {
+                args += "--ctx-size"
+                args += contextTokens.toString()
             }
             val pb = ProcessBuilder(args)
             pb.directory(install.nativeDir)
@@ -408,6 +413,7 @@ class AiServerService : Service() {
             idleMinutes: Int = 0,
             batteryStopPct: Int = 0,
             thermalStop: Boolean = true,
+            contextTokens: Int = 0,
         ) {
             autoStopTriggered.set(false)
             val intent =
@@ -419,6 +425,7 @@ class AiServerService : Service() {
                     putExtra(EXTRA_IDLE_MINUTES, idleMinutes)
                     putExtra(EXTRA_BATTERY_STOP_PCT, batteryStopPct)
                     putExtra(EXTRA_THERMAL_STOP, thermalStop)
+                    putExtra("contextTokens", contextTokens)
                 }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
