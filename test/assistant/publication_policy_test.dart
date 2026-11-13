@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:buildify_flutter/models/ai_server_models.dart';
 import 'package:buildify_flutter/providers/ai_server_provider.dart';
 import 'package:buildify_flutter/services/native_server_bridge.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 class _Storage extends FlutterSecureStorage {
   final values = <String, String>{};
   bool fail = false;
+  Completer<void>? scopeGate;
   @override
   Future<void> write({
     required String key,
@@ -19,6 +21,9 @@ class _Storage extends FlutterSecureStorage {
     WindowsOptions? wOptions,
   }) async {
     if (fail) throw StateError('Storage unavailable');
+    if (key == 'model_access_scope' && scopeGate != null) {
+      await scopeGate!.future;
+    }
     if (value == null) {
       values.remove(key);
     } else {
@@ -106,4 +111,20 @@ void main() {
       expect(bridge.calls, isEmpty);
     },
   );
+  test('a late public save cannot override a newer private decision', () async {
+    await controller.regenerateApiKey();
+    await controller.setRequireApiKey(true);
+    storage.scopeGate = Completer<void>();
+    final enabling = controller.setModelAccessScope(ModelAccessScope.public);
+    await Future<void>.delayed(Duration.zero);
+    final disabling = controller.setModelAccessScope(
+      ModelAccessScope.deviceNetwork,
+    );
+    expect(controller.modelAccessScope, ModelAccessScope.deviceNetwork);
+    storage.scopeGate!.complete();
+    await enabling;
+    await disabling;
+    expect(controller.modelAccessScope, ModelAccessScope.deviceNetwork);
+    expect(storage.values['model_access_scope'], 'deviceNetwork');
+  });
 }
