@@ -4,8 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
-/// Opt-in hackathon tools: inspect state or request a locally approved plan.
-/// No HTTP route authorizes execution.
+/// Opt-in authenticated hackathon tools, including paired-owner plan confirmation.
 class StatusProbeServer {
   StatusProbeServer._(
     this._server,
@@ -26,8 +25,21 @@ class StatusProbeServer {
   final Future<Map<String, Object?>> Function(String, Map<String, Object?>)?
   _invokeTool;
   bool _busy = false;
+  Future<void>? _closing;
 
   int get port => _server.port;
+
+  /// Local owner UI uses the same coordinator as authenticated voice requests.
+  Future<Map<String, Object?>> invokeLocalTool(
+    String name,
+    Map<String, Object?> args,
+  ) async {
+    final invoke = _invokeTool;
+    if (_closing != null || invoke == null) {
+      return {'ok': false, 'error': 'voice_bridge_unavailable'};
+    }
+    return invoke(name, args);
+  }
 
   static Future<StatusProbeServer> start({
     required String token,
@@ -56,7 +68,7 @@ class StatusProbeServer {
     return probe;
   }
 
-  Future<void> close() => _server.close(force: true);
+  Future<void> close() => _closing ??= _server.close(force: true);
 
   Future<void> _handle(HttpRequest request) async {
     final response = request.response;

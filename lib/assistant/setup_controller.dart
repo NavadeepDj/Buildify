@@ -79,6 +79,7 @@ class AssistantSetupController extends StateNotifier<AssistantSetupState> {
         now: now,
         preference: preference,
         task: task,
+        allowReducedContext: true,
       );
       // Unknown binary support is shown as an explicit trial, never eligible.
       final candidates = result.candidates.where(
@@ -95,7 +96,7 @@ class AssistantSetupController extends StateNotifier<AssistantSetupState> {
         final required =
             closest?.model.requirements == null
                 ? null
-                : (closest!.model.requirements!.estimatedMemoryBytes +
+                : (closest!.estimatedMemoryBytes! +
                         const ModelRecommendationService().memoryReserveBytes) /
                     1073741824;
         final memoryBlocked =
@@ -119,7 +120,7 @@ class AssistantSetupController extends StateNotifier<AssistantSetupState> {
         modelId: candidate.model.id,
         artifactSha256: r.sha256,
         downloadBytes: r.bytes,
-        contextTokens: r.contextTokens,
+        contextTokens: candidate.contextTokens ?? r.contextTokens,
         scope: ModelAccessScope.deviceNetwork,
         stopExisting: stopExisting,
         createdAt: now,
@@ -129,7 +130,7 @@ class AssistantSetupController extends StateNotifier<AssistantSetupState> {
         plan: plan,
         candidate: candidate,
         message:
-            'This candidate fits the resource budget. Runtime compatibility will be tested during startup and inference.',
+            '${plan.contextTokens < r.contextTokens ? 'Using a reduced ${plan.contextTokens}-token context to fit available memory. ' : ''}This candidate fits the resource budget. Runtime compatibility will be tested during startup and inference.',
       );
     } catch (_) {
       if (mounted) {

@@ -60,8 +60,8 @@ class ModelOperationPlan {
       sha256.convert(utf8.encode(jsonEncode(toJson()))).toString();
 }
 
-/// Only an explicit local UI decision should call approve. This handle has no
-/// JSON constructor and is never accepted from cloud tool arguments.
+/// Minted locally after explicit UI approval or the paired owner's voice Go.
+/// This handle has no JSON constructor; remote input only identifies a plan.
 class LocalPlanApproval {
   LocalPlanApproval._(this.digest, this.approvedAt);
   final String digest;

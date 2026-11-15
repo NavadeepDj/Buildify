@@ -50,8 +50,9 @@ void main() {
     final request = await client.getUrl(
       Uri.parse('http://127.0.0.1:${server.port}$path'),
     );
-    if (credential != null)
+    if (credential != null) {
       request.headers.set('Authorization', 'Bearer $credential');
+    }
     final response = await request.close();
     return (
       response.statusCode,

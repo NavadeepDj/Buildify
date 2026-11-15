@@ -10,6 +10,7 @@ class ModelRequirements {
     required this.contextMemoryBytes,
     required this.format,
     required this.runtime,
+    this.desktopRuntimeOverheadBytes,
     this.qualityRank = 0,
     this.tasks = const [],
     this.testedConfigurations = const [],
@@ -21,6 +22,9 @@ class ModelRequirements {
   final String license;
   final int contextTokens;
   final int runtimeOverheadBytes;
+
+  /// Optional measured Windows CPU profile; mobile retains the default budget.
+  final int? desktopRuntimeOverheadBytes;
   final int contextMemoryBytes;
   final String format;
   final String runtime;
@@ -30,6 +34,19 @@ class ModelRequirements {
 
   int get estimatedMemoryBytes =>
       bytes + runtimeOverheadBytes + contextMemoryBytes;
+
+  /// Keep fixed weights/runtime overhead while scaling the context-cache budget.
+  /// This is a planning estimate; startup and inference must still be verified.
+  int estimatedMemoryBytesForContext(int tokens, {bool desktop = false}) {
+    if (tokens < 128 || tokens > contextTokens) {
+      throw RangeError.range(tokens, 128, contextTokens, 'tokens');
+    }
+    return bytes +
+        (desktop
+            ? desktopRuntimeOverheadBytes ?? runtimeOverheadBytes
+            : runtimeOverheadBytes) +
+        (contextMemoryBytes * tokens / contextTokens).ceil();
+  }
 
   static ModelRequirements? tryParse(Object? raw) {
     if (raw is! Map<String, dynamic>) return null;
@@ -42,6 +59,7 @@ class ModelRequirements {
     final context = positive('contextTokens');
     final overhead = positive('runtimeOverheadBytes');
     final cache = positive('contextMemoryBytes');
+    final desktopOverhead = positive('desktopRuntimeOverheadBytes');
     final hash = raw['sha256'];
     final revision = raw['sourceRevision'];
     final license = raw['license'];
@@ -52,6 +70,8 @@ class ModelRequirements {
         context == null ||
         overhead == null ||
         cache == null ||
+        (raw.containsKey('desktopRuntimeOverheadBytes') &&
+            desktopOverhead == null) ||
         hash is! String ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch(hash) ||
         revision is! String ||
@@ -74,6 +94,7 @@ class ModelRequirements {
       license: license,
       contextTokens: context,
       runtimeOverheadBytes: overhead,
+      desktopRuntimeOverheadBytes: desktopOverhead,
       contextMemoryBytes: cache,
       format: format,
       runtime: runtime,

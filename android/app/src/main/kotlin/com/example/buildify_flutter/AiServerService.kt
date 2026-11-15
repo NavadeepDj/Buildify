@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicLong
 class AiServerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
+    // A stopped Service must never leave the next instance a shut-down executor.
+    private val executor = Executors.newSingleThreadExecutor()
     private var batteryReceiver: BroadcastReceiver? = null
     private var thermalListener: PowerManager.OnThermalStatusChangedListener? = null
     private var idleHandler: Handler? = null
@@ -43,6 +45,7 @@ class AiServerService : Service() {
                 val thermalStop = intent.getBooleanExtra(EXTRA_THERMAL_STOP, true)
                 val contextTokens = intent.getIntExtra("contextTokens", 0)
 
+                val generation = operationGeneration.incrementAndGet()
                 cleanupScheduled.set(false)
                 killServerProcess()
                 currentModelPath = modelPath
@@ -58,21 +61,37 @@ class AiServerService : Service() {
 
                 startForeground(NOTIFICATION_ID, createNotification(port, ServerStatus.STARTING))
                 registerSafetyHooks()
-                executor.execute { runLlamaServer(modelPath, port, apiKey, contextTokens) }
+                executor.execute { runLlamaServer(modelPath, port, apiKey, contextTokens, generation) }
             }
 
             ACTION_STOP -> {
+                val generation = operationGeneration.incrementAndGet()
                 stopReason = stopReason ?: "user stopped"
                 killServerProcess()
                 currentStatus = ServerStatus.STOPPED
                 unregisterSafetyHooks()
-                scheduleServiceStop(this)
+                scheduleServiceStop(this, generation)
+            }
+            else -> {
+                // A recreated service has no model/approval to resume.
+                stopSelf()
             }
         }
-        return START_STICKY
+        return START_NOT_STICKY
+    }
+
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        operationGeneration.incrementAndGet()
+        stopReason = "Android background runtime limit reached"
+        lastError = "Android ended the background model service. Open Buildify to restart it."
+        killServerProcess()
+        currentStatus = ServerStatus.STOPPED
+        unregisterSafetyHooks()
+        stopSelf()
     }
 
     override fun onDestroy() {
+        operationGeneration.incrementAndGet()
         killServerProcess()
         unregisterSafetyHooks()
         currentStatus = ServerStatus.STOPPED
@@ -80,16 +99,17 @@ class AiServerService : Service() {
         super.onDestroy()
     }
 
-    private fun runLlamaServer(modelPath: String, port: Int, apiKey: String?, contextTokens: Int) {
+    private fun runLlamaServer(modelPath: String, port: Int, apiKey: String?, contextTokens: Int, generation: Long) {
+        if (operationGeneration.get() != generation) return
         try {
-            val install =
-                LlamaServerBinary.prepare(this)
-                    ?: run {
-                        lastError =
-                            "Missing llama-server binary. Add jniLibs/<abi>/libllama-server.so (see jniLibs/arm64-v8a/README.txt)."
-                        currentStatus = ServerStatus.STOPPED
-                        return@runLlamaServer
-                    }
+            val install = LlamaServerBinary.prepare(this)
+            if (operationGeneration.get() != generation) return
+            if (install == null) {
+                lastError =
+                    "Missing llama-server binary. Add jniLibs/<abi>/libllama-server.so (see jniLibs/arm64-v8a/README.txt)."
+                currentStatus = ServerStatus.STOPPED
+                return
+            }
 
             val model = File(modelPath)
             if (!model.exists()) {
@@ -126,21 +146,30 @@ class AiServerService : Service() {
             pb.environment()["TMPDIR"] = cacheDir.absolutePath
             pb.redirectErrorStream(true)
 
+            if (operationGeneration.get() != generation) return
+
             val proc =
                 try {
                     pb.start()
                 } catch (e: Exception) {
                     Log.e(TAG, "ProcessBuilder.start failed", e)
-                    lastError = e.message ?: "failed to start llama-server"
-                    currentStatus = ServerStatus.STOPPED
+                    if (operationGeneration.get() == generation) {
+                        lastError = e.message ?: "failed to start llama-server"
+                        currentStatus = ServerStatus.STOPPED
+                    }
                     return@runLlamaServer
                 }
 
             synchronized(processLock) {
+                if (operationGeneration.get() != generation) {
+                    proc.destroy()
+                    return
+                }
                 serverProcess = proc
+                currentStatus = ServerStatus.RUNNING
             }
-            currentStatus = ServerStatus.RUNNING
             mainHandler.post {
+                if (operationGeneration.get() != generation) return@post
                 val nm = getSystemService(NotificationManager::class.java)
                 nm.notify(NOTIFICATION_ID, createNotification(port, ServerStatus.RUNNING))
             }
@@ -151,9 +180,9 @@ class AiServerService : Service() {
                         proc.inputStream.bufferedReader().forEachLine { line ->
                             // Track real activity for idle timeout. llama-server prints
                             // "log_server_r: done request: ..." per HTTP request.
-                            if (line.contains("log_server_r: done request") ||
+                            if (operationGeneration.get() == generation && (line.contains("log_server_r: done request") ||
                                 line.contains("HTTP/1.1\" 200")
-                            ) {
+                            )) {
                                 lastRequestEpochMillis.set(System.currentTimeMillis())
                             }
                             Log.i(TAG, line)
@@ -170,21 +199,23 @@ class AiServerService : Service() {
             } catch (_: InterruptedException) {
             }
 
-            if (exit != 0 && lastError == null) {
+            if (operationGeneration.get() == generation && exit != 0 && lastError == null) {
                 lastError = "llama-server exited with code $exit"
             }
         } catch (e: Exception) {
             Log.e(TAG, "runLlamaServer failed", e)
-            if (lastError == null) {
+            if (operationGeneration.get() == generation && lastError == null) {
                 lastError = e.message ?: "server error"
             }
         } finally {
             synchronized(processLock) {
-                serverProcess = null
+                if (operationGeneration.get() == generation) {
+                    serverProcess = null
+                    currentStatus = ServerStatus.STOPPED
+                    unregisterSafetyHooks()
+                    scheduleServiceStop(this@AiServerService, generation)
+                }
             }
-            currentStatus = ServerStatus.STOPPED
-            unregisterSafetyHooks()
-            scheduleServiceStop(this@AiServerService)
         }
     }
 
@@ -284,10 +315,13 @@ class AiServerService : Service() {
 
     private fun triggerAutoStop(reason: String) {
         if (autoStopTriggered.compareAndSet(false, true)) {
+            val expectedGeneration = operationGeneration.get()
             stopReason = reason
             lastError = "auto-stop: $reason"
             Log.w(TAG, "auto-stop: $reason")
             mainHandler.post {
+                if (operationGeneration.get() != expectedGeneration) return@post
+                val generation = operationGeneration.incrementAndGet()
                 try {
                     val nm = getSystemService(NotificationManager::class.java)
                     nm.notify(
@@ -296,8 +330,11 @@ class AiServerService : Service() {
                     )
                 } catch (_: Exception) {
                 }
+                killServerProcess()
+                currentStatus = ServerStatus.STOPPED
+                unregisterSafetyHooks()
+                scheduleServiceStop(this, generation)
             }
-            killServerProcess()
         }
     }
 
@@ -358,7 +395,7 @@ class AiServerService : Service() {
         private const val NOTIFICATION_ID = 1001
         private const val IDLE_CHECK_INTERVAL_MS = 30_000L
 
-        private val executor = Executors.newSingleThreadExecutor()
+        private val operationGeneration = AtomicLong(0L)
         private val processLock = Any()
         private var serverProcess: Process? = null
 
@@ -456,9 +493,11 @@ class AiServerService : Service() {
             }
         }
 
-        private fun scheduleServiceStop(service: Service) {
+        private fun scheduleServiceStop(service: Service, generation: Long) {
+            if (operationGeneration.get() != generation) return
             if (!cleanupScheduled.compareAndSet(false, true)) return
             mainHandler.post {
+                if (operationGeneration.get() != generation) return@post
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                         service.stopForeground(Service.STOP_FOREGROUND_REMOVE)

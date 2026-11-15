@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:buildify_flutter/assistant/controller_model_runtime.dart';
@@ -16,12 +17,16 @@ class _Bridge implements ServerBridge {
       throw StateError('Unexpected native call');
 }
 
+// This test uses a real loopback listener instead of Flutter's HTTP-400 stub.
+class _LocalHttpOverrides extends HttpOverrides {}
+
 class _Controller extends AiServerController {
   _Controller(this.file, ModelProfile model)
     : super(bridge: _Bridge(), initialize: false) {
     state = state.copyWith(models: [model], selectedModelId: model.id);
   }
   final File file;
+  void usePort(int port) => state = state.copyWith(port: port);
   @override
   Future<File> modelArtifactForAssistant(String id) async => file;
   @override
@@ -95,5 +100,54 @@ void main() {
         throwsA(isA<ModelOperationFailure>()),
       );
     },
+  );
+
+  test(
+    'cancel interrupts a pending native model readiness probe',
+    () => HttpOverrides.runWithHttpOverrides(() async {
+      FlutterSecureStorage.setMockInitialValues({});
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final healthStarted = Completer<void>();
+      server.listen((request) {
+        expect(request.uri.path, '/health');
+        if (!healthStarted.isCompleted) healthStarted.complete();
+        // Simulate a cold native model which has not answered readiness yet.
+      });
+      final controller = _Controller(
+        File('unused-model-readiness-fixture'),
+        ModelProfile(
+          id: 'test',
+          name: 'test',
+          fileName: 'model.gguf',
+          downloadUrl: 'https://huggingface.co/unused',
+          sizeLabel: '1 B',
+          speed: 'test',
+          quality: 'test',
+          requiredRamGb: 1,
+          description: 'Readiness cancellation fixture',
+        ),
+      )..usePort(server.port);
+      addTearDown(controller.dispose);
+      final runtime = ControllerModelRuntime(controller);
+      final now = DateTime.now();
+      final plan = ModelOperationPlan(
+        id: 'cancel-readiness',
+        modelId: 'test',
+        artifactSha256: 'a' * 64,
+        downloadBytes: 1,
+        scope: ModelAccessScope.deviceNetwork,
+        stopExisting: false,
+        createdAt: now,
+        expiresAt: now.add(const Duration(minutes: 1)),
+      );
+      final outcome = expectLater(
+        runtime.verifyInference(plan),
+        throwsA(isA<ModelOperationFailure>()),
+      );
+      await healthStarted.future.timeout(const Duration(seconds: 3));
+      await runtime.cancel(plan);
+      await outcome.timeout(const Duration(seconds: 1));
+    }, _LocalHttpOverrides()),
   );
 }

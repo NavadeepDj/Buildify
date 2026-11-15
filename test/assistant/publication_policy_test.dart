@@ -63,12 +63,12 @@ void main() {
     expect(bridge.calls, isEmpty);
   });
   test(
-    'public intent requires a configured key and persists only intent',
+    'public intent supports keyless access but requires a confirmed runtime',
     () async {
-      await expectLater(
-        controller.setModelAccessScope(ModelAccessScope.public),
-        throwsStateError,
-      );
+      await controller.setModelAccessScope(ModelAccessScope.public);
+      expect(controller.snapshot.security.requireApiKey, isFalse);
+      expect(await controller.startTunnel(), isFalse);
+      expect(bridge.calls, isEmpty);
       await controller.regenerateApiKey();
       await controller.setRequireApiKey(true);
       await controller.setModelAccessScope(ModelAccessScope.public);

@@ -87,12 +87,20 @@ void main() {
                   )
                   .first,
         );
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.drag(find.descendant(of: find.byType(AssistantSetupScreen), matching: find.byType(ListView)).first, const Offset(0, -650));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.ensureVisible(approve);
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(approve.hitTestable(), findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.drag(
+          find
+              .descendant(
+                of: find.byType(AssistantSetupScreen),
+                matching: find.byType(ListView),
+              )
+              .first,
+          const Offset(0, -650),
+        );
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.ensureVisible(approve);
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(approve.hitTestable(), findsOneWidget);
         await tester.tap(approve);
         await tester.pump();
         await waitFor(
@@ -145,8 +153,9 @@ void main() {
             await runtime.execute('stop_project', {'project_id': project.id});
             expect(backend.state.activeSession?.projectId, isNot(project.id));
           } finally {
-            if (backend.state.projects.any((p) => p.id == project.id))
+            if (backend.state.projects.any((p) => p.id == project.id)) {
               await backend.deleteProject(project.id);
+            }
           }
         });
         expect(tester.takeException(), null);

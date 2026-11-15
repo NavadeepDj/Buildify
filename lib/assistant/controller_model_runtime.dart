@@ -13,6 +13,7 @@ class ControllerModelRuntime implements ModelOperationRuntime {
   ControllerModelRuntime(this.controller);
   final AiServerController controller;
   http.Client? _downloadClient;
+  ModelEndpointVerifier? _verifier;
   bool _cancelled = false, _started = false;
   File? _partial;
   Duration? inferenceDuration;
@@ -26,7 +27,8 @@ class ControllerModelRuntime implements ModelOperationRuntime {
     final model = matches.single;
     final r = model.requirements;
     if (r == null ||
-        r.contextTokens != plan.contextTokens ||
+        plan.contextTokens > r.contextTokens ||
+        !{r.contextTokens, 1024, 512, 256}.contains(plan.contextTokens) ||
         r.sha256 != plan.artifactSha256 ||
         r.bytes != plan.downloadBytes) {
       throw const ModelOperationFailure('settings_changed');
@@ -48,7 +50,12 @@ class ControllerModelRuntime implements ModelOperationRuntime {
         }.contains(reading.status) ||
         memory == null ||
         memory * 1073741824 <
-            model.requirements!.estimatedMemoryBytes + 536870912) {
+            model.requirements!.estimatedMemoryBytesForContext(
+                  plan.contextTokens,
+                  desktop:
+                      reading.value?.platform == AssistantHostPlatform.windows,
+                ) +
+                536870912) {
       throw const ModelOperationFailure('settings_changed');
     }
     final file = await controller.modelArtifactForAssistant(plan.modelId);
@@ -200,6 +207,7 @@ class ControllerModelRuntime implements ModelOperationRuntime {
   Future<void> verifyInference(ModelOperationPlan plan) async {
     _check();
     final verifier = ModelEndpointVerifier();
+    _verifier = verifier;
     try {
       inferenceDuration = await verifier.verify(
         port: controller.snapshot.port,
@@ -211,6 +219,7 @@ class ControllerModelRuntime implements ModelOperationRuntime {
       _check();
     } finally {
       verifier.close();
+      if (identical(_verifier, verifier)) _verifier = null;
     }
   }
 
@@ -218,6 +227,7 @@ class ControllerModelRuntime implements ModelOperationRuntime {
   Future<void> cancel(ModelOperationPlan plan) async {
     _cancelled = true;
     _downloadClient?.close();
+    _verifier?.close();
     if (_started) {
       await controller.stopServer();
       _started = false;

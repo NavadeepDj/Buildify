@@ -78,6 +78,7 @@ flutter:
 
   assets:
     - assets/models/catalog.json
+    - assets/fonts/
     - assets/github.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -37,6 +37,11 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
         <service
+            android:name=".VoiceTunnelService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service
             android:name=".CloudflareTunnelService"
             android:enabled="true"
             android:exported="false"

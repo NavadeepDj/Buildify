@@ -72,6 +72,14 @@ class CloudflareTunnelService : Service() {
         super.onDestroy()
     }
 
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        lastError = "Android ended the background hosting tunnel. Open Buildify to reconnect."
+        currentStatus = TunnelStatus.STOPPED
+        lastPublicUrl = null
+        cleanup()
+        stopSelf()
+    }
+
     private fun runCloudflared(install: CloudflaredBinary.Install, port: Int, tunnelUrl: String?, tunnelToken: String?) {
         val args = mutableListOf(
             install.binary.absolutePath,

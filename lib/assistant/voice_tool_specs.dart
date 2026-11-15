@@ -71,8 +71,37 @@ class VoiceToolSpec {
 const _id = {'type': 'string', 'maxLength': 100};
 const voiceToolSpecs = <VoiceToolSpec>[
   VoiceToolSpec(
+    'email_model_stop_status',
+    'Only when the owner requests a stop confirmation email: queue one email for an existing stop_model action_id. Waits for verified stop completion, even after the call ends while Buildify stays open. Does not approve or stop models. Poll action_email in get_action_status; only sent means provider accepted. No recipient or message content accepted.',
+    {'action_id': _id},
+    required: ['action_id'],
+    mutates: true,
+  ),
+  VoiceToolSpec(
+    'email_model_endpoint',
+    'Email the active public model endpoint to the configured owner. Set resend true only if explicitly asked to resend; this never stops or restarts the model. No recipient, URL, or credentials are accepted. Poll endpoint_email in get_setup_status. Never claim delivery before state sent.',
+    {
+      'resend': {'type': 'boolean'},
+    },
+    mutates: true,
+  ),
+  VoiceToolSpec(
+    'confirm_model_action',
+    'After the caller explicitly approves a pending stop_model, share_model, make_model_private, select_model, download_model, cancel_model_download, or cancel_model_setup action, confirm that exact action_id. Works from mobile without a laptop click. Cannot approve deletions or project actions. Poll get_action_status.',
+    {'action_id': _id},
+    required: ['action_id'],
+    mutates: true,
+  ),
+  VoiceToolSpec(
+    'confirm_model_setup',
+    'Only after the caller explicitly says Go or approves the spoken plan: execute that exact prepared plan, then publish an endpoint with no API-key authorization required. Pass plan_id from get_setup_status. No model selection or app click is needed. Poll get_setup_status for progress and endpoint.',
+    {'plan_id': _id},
+    required: ['plan_id'],
+    mutates: true,
+  ),
+  VoiceToolSpec(
     'request_specific_model_setup',
-    'Prepare a device/LAN setup plan for a specific model ID from list_models. Owner must approve in Buildify before download/start. Cannot interrupt a current model without separate owner action.',
+    'Prepare a setup plan for a specific model ID from list_models. Read the plan to the caller and ask them to say Go; then call confirm_model_setup. Cannot interrupt a current model.',
     {'model_id': _id},
     required: ['model_id'],
     mutates: true,
@@ -84,13 +113,13 @@ const voiceToolSpecs = <VoiceToolSpec>[
   ),
   VoiceToolSpec(
     'request_model_setup',
-    'Prepare a fast local model plan for short answers and open the owner approval screen. Use when asked to run, start, deploy or set up a model. Repeated pending requests reuse the plan. No download or start until local approval.',
+    'Prepare a fast compatible model plan for short answers. Use when asked to run a model. Repeated pending requests reuse the plan. Poll get_setup_status, read the ready plan, and ask the caller to say Go. Then use confirm_model_setup.',
     {},
     mutates: true,
   ),
   VoiceToolSpec(
     'get_setup_status',
-    'Read model setup progress and whether a real inference test passed. needs_approval means the owner must approve in Buildify.',
+    'Read model setup progress, plan_id, inference verification, and public endpoint. needs_approval means ask the caller to say Go and call confirm_model_setup with this plan_id.',
     {},
   ),
   VoiceToolSpec(
@@ -125,7 +154,7 @@ const voiceToolSpecs = <VoiceToolSpec>[
   ),
   VoiceToolSpec(
     'stop_model',
-    'Request stopping the model. Requires owner approval in the Buildify action inbox.',
+    'Request stopping the model. Ask for spoken owner approval, then call confirm_model_action with the returned action_id. Poll get_action_status. If the owner asks for a stop email, call email_model_stop_status with that same action_id.',
     {},
     mutates: true,
   ),
@@ -198,7 +227,7 @@ const voiceToolSpecs = <VoiceToolSpec>[
   ),
   VoiceToolSpec(
     'share_model',
-    'Request public model sharing. Requires a running model, API-key protection already configured locally, and owner approval.',
+    'Request public model sharing with the model current authentication setting. Requires a running model and owner approval. The voice setup prototype defaults to no API key.',
     {},
     mutates: true,
   ),

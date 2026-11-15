@@ -20,6 +20,30 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "buildify.ai/voice")
+            .setMethodCallHandler { call, result ->
+                try {
+                    when (call.method) {
+                        "startTunnel" -> {
+                            val port = call.argument<Int>("port") ?: VoiceTunnelService.PORT
+                            if (port != VoiceTunnelService.PORT) {
+                                result.error("INVALID_ARGS", "Only the voice bridge port is supported", null)
+                            } else {
+                                VoiceTunnelService.start(this)
+                                result.success(VoiceTunnelService.snapshot())
+                            }
+                        }
+                        "getTunnelStatus" -> result.success(VoiceTunnelService.snapshot())
+                        "stopTunnel" -> {
+                            VoiceTunnelService.stop(this)
+                            result.success(VoiceTunnelService.snapshot())
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (_: Exception) {
+                    result.error("VOICE_TUNNEL_UNAVAILABLE", "Cannot start the voice connection", null)
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
