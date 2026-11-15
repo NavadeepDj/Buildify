@@ -223,10 +223,12 @@ class EmbeddedBackendService {
         logs: [],
         hostMappings: {},
       ) {
-    if (autoHydrate) unawaited(hydrateProjects());
+    if (autoHydrate) _initialization = hydrateProjects();
   }
 
   final int projectPortStart;
+  Future<void> _initialization = Future<void>.value();
+  Future<void> get ready => _initialization;
   final _uuid = const Uuid();
   final _rand = Random();
   final _stateController = StreamController<BackendState>.broadcast();

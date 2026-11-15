@@ -17,6 +17,9 @@ class AssistantSetupState {
     this.message,
     this.endpoint,
     this.inferenceDuration,
+    this.failureCode,
+    this.availableMemoryGiB,
+    this.requiredMemoryGiB,
   });
   final bool busy;
   final ModelOperationPlan? plan;
@@ -24,6 +27,8 @@ class AssistantSetupState {
   final ModelOperationRecord? record;
   final String? message, endpoint;
   final Duration? inferenceDuration;
+  final String? failureCode;
+  final double? availableMemoryGiB, requiredMemoryGiB;
 }
 
 final assistantSetupProvider =
@@ -54,6 +59,7 @@ class AssistantSetupController extends StateNotifier<AssistantSetupState> {
     ModelPreference preference = ModelPreference.balanced,
     String task = 'short_answers',
     bool stopExisting = false,
+    String? modelId,
   }) async {
     if (state.busy) return;
     state = const AssistantSetupState(
@@ -76,12 +82,33 @@ class AssistantSetupController extends StateNotifier<AssistantSetupState> {
       );
       // Unknown binary support is shown as an explicit trial, never eligible.
       final candidates = result.candidates.where(
-        (c) => c.blockers.every((b) => b == 'runtime_verification_required'),
+        (c) =>
+            (modelId == null || c.model.id == modelId) &&
+            c.blockers.every((b) => b == 'runtime_verification_required'),
       );
       if (candidates.isEmpty) {
-        state = const AssistantSetupState(
+        final closest =
+            result.candidates
+                .where((c) => modelId == null || c.model.id == modelId)
+                .firstOrNull;
+        final available = metrics.value?.availableMemoryGiB;
+        final required =
+            closest?.model.requirements == null
+                ? null
+                : (closest!.model.requirements!.estimatedMemoryBytes +
+                        const ModelRecommendationService().memoryReserveBytes) /
+                    1073741824;
+        final memoryBlocked =
+            closest?.blockers.contains('insufficient_memory') == true;
+        state = AssistantSetupState(
+          failureCode:
+              memoryBlocked ? 'insufficient_memory' : 'no_compatible_plan',
+          availableMemoryGiB: available,
+          requiredMemoryGiB: required,
           message:
-              'A suitable candidate could not be prepared. Check available memory, storage and the model catalog, then retry.',
+              memoryBlocked && available != null && required != null
+                  ? 'Not enough available memory: ${available.toStringAsFixed(2)} GiB available; ${required.toStringAsFixed(2)} GiB required for ${closest!.model.name}, including the host reserve. Free memory and retry. No model is waiting for approval.'
+                  : 'No compatible model plan could be prepared. Check memory, storage and model support, then retry. No model is waiting for approval.',
         );
         return;
       }

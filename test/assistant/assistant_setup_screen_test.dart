@@ -59,6 +59,7 @@ class _Setup extends AssistantSetupController {
     ModelPreference preference = ModelPreference.balanced,
     String task = 'short_answers',
     bool stopExisting = false,
+    String? modelId,
   }) async {
     final model = host.snapshot.models.first;
     final r = model.requirements!;

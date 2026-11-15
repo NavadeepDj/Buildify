@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "buildify": {
+      "command": "node",
+      "args": ["C:/Users/navad/Buildify/tool/buildify-mcp/server.mjs"]
+    }
+  }
+}

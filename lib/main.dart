@@ -14,6 +14,15 @@ import 'services/hosted_auth_config.dart';
 import 'services/management_api_config.dart';
 import 'services/secure_auth_storage.dart';
 import 'services/windows_app_storage.dart';
+import 'assistant/status_probe_provider.dart';
+import 'screens/assistant_setup_screen.dart';
+import 'assistant/voice_tool_runtime.dart';
+import 'screens/voice_actions_screen.dart';
+import 'pages/host_project_wizard.dart';
+import 'pages/project_detail_page.dart';
+import 'pages/env_management_page.dart';
+
+final _appNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,10 +84,59 @@ class BuildifyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final voiceBridge = ref.watch(statusProbeProvider);
+    final pendingVoiceRequests = ref.watch(pendingVoiceRequestsProvider);
+    ref.listen(voiceSetupRequestsProvider, (previous, next) {
+      if (previous == next) return;
+      _appNavigatorKey.currentState?.pushNamed('/voice-setup');
+    });
+    ref.listen(voiceNavigationProvider, (previous, next) {
+      if (next == null || previous == next) return;
+      Widget page;
+      switch (next.page) {
+        case 'wizard':
+          page = const HostProjectSourcePage();
+        case 'project':
+          page = ProjectDetailPage(projectId: next.projectId!);
+        case 'environment':
+          page = EnvManagementPage(projectId: next.projectId!);
+        default:
+          page = const VoiceActionsScreen();
+      }
+      _appNavigatorKey.currentState?.push(
+        MaterialPageRoute<void>(builder: (_) => page),
+      );
+    });
     final base = ThemeData.dark(useMaterial3: true);
     return MaterialApp(
+      navigatorKey: _appNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Buildify AI Server',
+      builder:
+          (context, child) => Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              if (voiceBridge.asData?.value != null)
+                Positioned(
+                  right: 16,
+                  bottom: 76,
+                  child: FloatingActionButton.extended(
+                    heroTag: null,
+                    onPressed:
+                        () => _appNavigatorKey.currentState?.push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const VoiceActionsScreen(),
+                          ),
+                        ),
+                    icon: Badge(
+                      label: Text('$pendingVoiceRequests'),
+                      child: const Icon(Icons.record_voice_over_outlined),
+                    ),
+                    label: const Text('Voice requests'),
+                  ),
+                ),
+            ],
+          ),
       theme: base.copyWith(
         scaffoldBackgroundColor: AppPalette.bg,
         colorScheme: base.colorScheme.copyWith(
@@ -114,6 +172,12 @@ class BuildifyApp extends ConsumerWidget {
       initialRoute: '/',
       onGenerateRoute: (settings) {
         final uri = Uri.tryParse(settings.name ?? '') ?? Uri();
+        if (uri.path == '/voice-setup') {
+          return MaterialPageRoute<void>(
+            builder: (_) => const AssistantSetupScreen(),
+            settings: settings,
+          );
+        }
         if (uri.path == '/verify') {
           final token = uri.queryParameters['token'];
           return MaterialPageRoute<void>(
