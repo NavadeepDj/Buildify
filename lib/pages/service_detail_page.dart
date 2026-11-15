@@ -1,3 +1,5 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -219,10 +221,7 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
         _logsFullscreen ? MediaQuery.sizeOf(context).height * 0.75 : 400.0;
 
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _DetailPalette.background,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: Scaffold(
         backgroundColor: _DetailPalette.background,
         body: DecoratedBox(
@@ -496,18 +495,18 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
 }
 
 class _DetailPalette {
-  static const background = Color(0xFF131312);
-  static const primary = Color(0xFFFFFFFF);
-  static const onSurface = Color(0xFFE5E2E0);
-  static const onSurfaceVariant = Color(0xFFC4C7C8);
+  static const background = AppPalette.bg;
+  static const primary = AppPalette.primary;
+  static const onSurface = AppPalette.text;
+  static const onSurfaceVariant = AppPalette.text;
   static const onPrimary = Color(0xFF2F3131);
-  static const outlineVariant = Color(0xFF444748);
-  static const surfaceContainer = Color(0xFF20201E);
-  static const surfaceContainerLow = Color(0xFF1C1C1A);
-  static const surfaceContainerLowest = Color(0xFF0E0E0D);
-  static const successGreen = Color(0xFF10B981);
+  static const outlineVariant = AppPalette.border;
+  static const surfaceContainer = AppPalette.surfaceAlt;
+  static const surfaceContainerLow = AppPalette.surface;
+  static const surfaceContainerLowest = AppPalette.bg;
+  static const successGreen = AppPalette.text;
   static const statusSuspended = Color(0xFF897671);
-  static const terminalBg = Color(0xFF0E0E0D);
+  static const terminalBg = AppPalette.bg;
 }
 
 class _LogLine {

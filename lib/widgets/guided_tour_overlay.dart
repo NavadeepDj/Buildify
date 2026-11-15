@@ -1,3 +1,4 @@
+import '../theme/app_palette.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,10 +7,7 @@ import '../services/guided_tour_service.dart';
 
 /// Overlay widget that renders the spotlight cutout and tooltip card over its child.
 class GuidedTourOverlay extends ConsumerStatefulWidget {
-  const GuidedTourOverlay({
-    super.key,
-    required this.child,
-  });
+  const GuidedTourOverlay({super.key, required this.child});
 
   final Widget child;
 
@@ -41,7 +39,9 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
     if (ctx == null || !ctx.mounted) return null;
     try {
       final renderBox = ctx.findRenderObject() as RenderBox?;
-      if (renderBox == null || !renderBox.attached || !renderBox.hasSize) return null;
+      if (renderBox == null || !renderBox.attached || !renderBox.hasSize) {
+        return null;
+      }
 
       final position = renderBox.localToGlobal(Offset.zero);
       final size = renderBox.size;
@@ -66,12 +66,13 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
 
     // Padding around highlighted target
     const padding = 8.0;
-    final paddedRect = targetRect != null
-        ? RRect.fromRectAndRadius(
-            targetRect.inflate(padding),
-            const Radius.circular(12),
-          )
-        : null;
+    final paddedRect =
+        targetRect != null
+            ? RRect.fromRectAndRadius(
+              targetRect.inflate(padding),
+              const Radius.circular(12),
+            )
+            : null;
 
     return Stack(
       children: [
@@ -102,13 +103,12 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFF10B981).withValues(alpha: opacity),
+                      color: AppPalette.text.withValues(alpha: opacity),
                       width: 2.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF10B981)
-                            .withValues(alpha: opacity * 0.4),
+                        color: AppPalette.text.withValues(alpha: opacity * 0.4),
                         blurRadius: 12,
                         spreadRadius: 2,
                       ),
@@ -157,9 +157,15 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
       } else {
         // Fallback: place above or below whichever has more space
         if (targetRect.top > screenSize.height / 2) {
-          cardTop = (targetRect.top - cardHeightEstimate - margin).clamp(40.0, screenSize.height - 240.0);
+          cardTop = (targetRect.top - cardHeightEstimate - margin).clamp(
+            40.0,
+            screenSize.height - 240.0,
+          );
         } else {
-          cardTop = (targetRect.bottom + margin).clamp(40.0, screenSize.height - 240.0);
+          cardTop = (targetRect.bottom + margin).clamp(
+            40.0,
+            screenSize.height - 240.0,
+          );
         }
       }
     }
@@ -177,10 +183,10 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF161B22).withValues(alpha: 0.92),
+                color: AppPalette.surface.withValues(alpha: 0.92),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                  color: AppPalette.text.withValues(alpha: 0.4),
                   width: 1.5,
                 ),
                 boxShadow: [
@@ -201,12 +207,14 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          color: AppPalette.text.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                            color: AppPalette.text.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -214,7 +222,7 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                           style: GoogleFonts.spaceMono(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF10B981),
+                            color: AppPalette.text,
                             letterSpacing: 1,
                           ),
                         ),
@@ -222,8 +230,11 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                       IconButton(
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.close,
-                            color: Color(0xFF8B949E), size: 18),
+                        icon: const Icon(
+                          Icons.close,
+                          color: AppPalette.muted,
+                          size: 18,
+                        ),
                         onPressed: notifier.completeTour,
                       ),
                     ],
@@ -246,7 +257,7 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                     currentStep.description,
                     style: GoogleFonts.spaceMono(
                       fontSize: 12,
-                      color: const Color(0xFF8B949E),
+                      color: AppPalette.muted,
                       height: 1.4,
                     ),
                   ),
@@ -259,14 +270,18 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                       TextButton(
                         onPressed: notifier.completeTour,
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF8B949E),
+                          foregroundColor: AppPalette.muted,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                         child: Text(
                           'Skip',
                           style: GoogleFonts.spaceMono(
-                              fontSize: 12, fontWeight: FontWeight.w600),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       const Spacer(),
@@ -277,9 +292,11 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                           onPressed: notifier.previousStep,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Color(0xFF30363D)),
+                            side: const BorderSide(color: AppPalette.border),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                           ),
                           child: Text(
                             'Back',
@@ -292,10 +309,12 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
                       ElevatedButton(
                         onPressed: notifier.nextStep,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: AppPalette.text,
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 8),
+                            horizontal: 18,
+                            vertical: 8,
+                          ),
                           elevation: 2,
                         ),
                         child: Text(
@@ -320,10 +339,7 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
 
 /// Custom painter that draws a dark translucent background with a hole cutout over the target element.
 class _SpotlightPainter extends CustomPainter {
-  _SpotlightPainter({
-    required this.targetRect,
-    required this.overlayColor,
-  });
+  _SpotlightPainter({required this.targetRect, required this.overlayColor});
 
   final RRect? targetRect;
   final Color overlayColor;
@@ -337,12 +353,15 @@ class _SpotlightPainter extends CustomPainter {
       return;
     }
 
-    final backgroundPath = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final backgroundPath =
+        Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
     final cutoutPath = Path()..addRRect(targetRect!);
 
-    final combinedPath =
-        Path.combine(PathOperation.difference, backgroundPath, cutoutPath);
+    final combinedPath = Path.combine(
+      PathOperation.difference,
+      backgroundPath,
+      cutoutPath,
+    );
     canvas.drawPath(combinedPath, paint);
   }
 

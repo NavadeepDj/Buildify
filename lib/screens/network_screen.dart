@@ -136,7 +136,6 @@ class NetworkScreen extends ConsumerWidget {
                       style: const TextStyle(
                         color: AppPalette.primary,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
                       ),
                     ),
                   ),
@@ -269,7 +268,6 @@ class NetworkScreen extends ConsumerWidget {
                       style: const TextStyle(
                         color: AppPalette.blue,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
                       ),
                     ),
                   ),
@@ -434,11 +432,7 @@ class _CodeBlock extends StatelessWidget {
       ),
       child: SelectableText(
         text,
-        style: const TextStyle(
-          color: AppPalette.text,
-          fontFamily: 'monospace',
-          fontSize: 13,
-        ),
+        style: const TextStyle(color: AppPalette.text, fontSize: 13),
       ),
     );
   }

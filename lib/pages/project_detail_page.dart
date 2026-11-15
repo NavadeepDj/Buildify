@@ -1,3 +1,5 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -17,18 +19,18 @@ import 'env_management_page.dart';
 // PALETTE — MATCHING service_detail_page.dart
 // ==========================================
 class _DetailPalette {
-  static const background = Color(0xFF131312);
-  static const primary = Color(0xFFFFFFFF);
-  static const onSurface = Color(0xFFE5E2E0);
-  static const onSurfaceVariant = Color(0xFFC4C7C8);
+  static const background = AppPalette.bg;
+  static const primary = AppPalette.primary;
+  static const onSurface = AppPalette.text;
+  static const onSurfaceVariant = AppPalette.text;
   static const onPrimary = Color(0xFF2F3131);
-  static const outlineVariant = Color(0xFF444748);
-  static const surfaceContainer = Color(0xFF20201E);
-  static const surfaceContainerLow = Color(0xFF1C1C1A);
-  static const surfaceContainerLowest = Color(0xFF0E0E0D);
-  static const successGreen = Color(0xFF10B981);
+  static const outlineVariant = AppPalette.border;
+  static const surfaceContainer = AppPalette.surfaceAlt;
+  static const surfaceContainerLow = AppPalette.surface;
+  static const surfaceContainerLowest = AppPalette.bg;
+  static const successGreen = AppPalette.text;
   static const statusSuspended = Color(0xFF897671);
-  static const terminalBg = Color(0xFF0E0E0D);
+  static const terminalBg = AppPalette.bg;
 }
 
 // ==========================================
@@ -117,7 +119,9 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
           tooltipPosition: TooltipPosition.top,
         ),
       ];
-      ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
+      ref
+          .read(guidedTourNotifierProvider.notifier)
+          .checkAndAutoStartTour(
             steps,
             tourKey: 'buildify_tour_project_detail',
           );
@@ -143,7 +147,11 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication, webOnlyWindowName: '_blank');
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
     } else {
       if (mounted) {
         Clipboard.setData(ClipboardData(text: url));
@@ -180,14 +188,22 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                   content: TextField(
                     controller: controller,
                     enabled: !saving,
-                    style: GoogleFonts.spaceMono(color: _DetailPalette.onSurface),
-                    onChanged: (value) => update(() => error = validateSubdomain(value)),
+                    style: GoogleFonts.spaceMono(
+                      color: _DetailPalette.onSurface,
+                    ),
+                    onChanged:
+                        (value) =>
+                            update(() => error = validateSubdomain(value)),
                     decoration: InputDecoration(
                       suffixText: '.$baseDomain',
-                      suffixStyle: GoogleFonts.spaceMono(color: _DetailPalette.onSurfaceVariant),
+                      suffixStyle: GoogleFonts.spaceMono(
+                        color: _DetailPalette.onSurfaceVariant,
+                      ),
                       errorText: error,
                       enabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: _DetailPalette.outlineVariant),
+                        borderSide: BorderSide(
+                          color: _DetailPalette.outlineVariant,
+                        ),
                       ),
                       focusedBorder: const OutlineInputBorder(
                         borderSide: BorderSide(color: _DetailPalette.primary),
@@ -245,8 +261,21 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
       final now = DateTime.now();
       final ts = _formatTime(now);
       return [
-        _LogLine(ts, '[buildify]', 'runtime ready: project service configured', createdAt: now, highlight: true, success: true),
-        _LogLine(ts, '[buildify]', 'listening for connections & build events', createdAt: now, dim: true),
+        _LogLine(
+          ts,
+          '[buildify]',
+          'runtime ready: project service configured',
+          createdAt: now,
+          highlight: true,
+          success: true,
+        ),
+        _LogLine(
+          ts,
+          '[buildify]',
+          'listening for connections & build events',
+          createdAt: now,
+          dim: true,
+        ),
       ];
     }
 
@@ -268,9 +297,10 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
   }
 
   String _formatTime(DateTime t) {
-    final h = t.hour >= 12
-        ? (t.hour == 12 ? 12 : t.hour - 12)
-        : (t.hour == 0 ? 12 : t.hour);
+    final h =
+        t.hour >= 12
+            ? (t.hour == 12 ? 12 : t.hour - 12)
+            : (t.hour == 0 ? 12 : t.hour);
     return '$h:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')} ${t.hour >= 12 ? 'pm' : 'am'}';
   }
 
@@ -282,11 +312,14 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
     }
     final q = _logSearchController.text.trim().toLowerCase();
     if (q.isNotEmpty) {
-      result = result
-          .where((l) =>
-              l.message.toLowerCase().contains(q) ||
-              l.instance.toLowerCase().contains(q))
-          .toList();
+      result =
+          result
+              .where(
+                (l) =>
+                    l.message.toLowerCase().contains(q) ||
+                    l.instance.toLowerCase().contains(q),
+              )
+              .toList();
     }
     return result;
   }
@@ -294,62 +327,75 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
   @override
   Widget build(BuildContext context) {
     final backendNotifier = ref.read(embeddedBackendProvider);
-    final backendState = ref.watch(backendStateProvider).value ?? backendNotifier.state;
+    final backendState =
+        ref.watch(backendStateProvider).value ?? backendNotifier.state;
     final aiState = ref.watch(aiServerProvider);
     final device = aiState.device;
 
     final project = backendState.projects.firstWhere(
       (p) => p.id == widget.projectId,
-      orElse: () => BackendProject(
-        id: widget.projectId,
-        name: 'Project',
-        repoProvider: 'GitHub',
-        url: '',
-        lastDeployedAt: null,
-        isLive: false,
-      ),
+      orElse:
+          () => BackendProject(
+            id: widget.projectId,
+            name: 'Project',
+            repoProvider: 'GitHub',
+            url: '',
+            lastDeployedAt: null,
+            isLive: false,
+          ),
     );
 
     final activeSession = backendState.activeSession;
     final isRunning = project.isLive;
 
     // Log calculation & auto-scroll
-    final backendLogs = backendState.logs.where((l) => l.projectId == project.id).toList();
+    final backendLogs =
+        backendState.logs.where((l) => l.projectId == project.id).toList();
     final logs = _filteredLogs(_allLogs(backendLogs));
     if (logs.length != _lastLogCount) {
       _lastLogCount = logs.length;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollLogsToBottom());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollLogsToBottom(),
+      );
     }
 
-    final horizontalPadding = MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
+    final horizontalPadding =
+        MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
 
     // Metrics calculations
-    final ramUsed = (device.ramGb - device.availRamGb).clamp(0, device.ramGb.toDouble());
-    final ramPct = device.ramGb > 0 ? (ramUsed / device.ramGb * 100).round() : 0;
-    final storagePct = device.freeStorageGb > 0
-        ? ((1 - device.freeStorageGb / (device.freeStorageGb + 8)) * 100).round().clamp(0, 100)
-        : 0;
+    final ramUsed = (device.ramGb - device.availRamGb).clamp(
+      0,
+      device.ramGb.toDouble(),
+    );
+    final ramPct =
+        device.ramGb > 0 ? (ramUsed / device.ramGb * 100).round() : 0;
+    final storagePct =
+        device.freeStorageGb > 0
+            ? ((1 - device.freeStorageGb / (device.freeStorageGb + 8)) * 100)
+                .round()
+                .clamp(0, 100)
+            : 0;
     final cpuPct = (aiState.requestsPerSecond * 8).clamp(0, 100).round();
 
     // Endpoints
     final apiUrl = 'http://${device.ipAddress}:${project.port}';
-    final liveUrl = project.liveUrl.isNotEmpty
-        ? project.liveUrl
-        : (activeSession != null && activeSession.projectId == project.id
-            ? activeSession.publicUrl
-            : '${device.ipAddress}:${project.port}');
-    final subdomainUrl = project.subdomain.isNotEmpty
-        ? 'https://${project.subdomain}.$baseDomain'
-        : 'https://${projectNameSubdomain(project.name)}.$baseDomain';
+    final liveUrl =
+        project.liveUrl.isNotEmpty
+            ? project.liveUrl
+            : (activeSession != null && activeSession.projectId == project.id
+                ? activeSession.publicUrl
+                : '${device.ipAddress}:${project.port}');
+    final subdomainUrl =
+        project.subdomain.isNotEmpty
+            ? 'https://${project.subdomain}.$baseDomain'
+            : 'https://${projectNameSubdomain(project.name)}.$baseDomain';
     final serviceId = 'web-${project.port}';
     final repoLabel = project.name;
-    final terminalHeight = _logsFullscreen ? MediaQuery.sizeOf(context).height * 0.75 : 400.0;
+    final terminalHeight =
+        _logsFullscreen ? MediaQuery.sizeOf(context).height * 0.75 : 400.0;
 
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _DetailPalette.background,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: GuidedTourOverlay(
         child: Scaffold(
           backgroundColor: _DetailPalette.background,
@@ -394,10 +440,14 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                                 onManualDeploy: () async {
                                   if (project.isLive) {
                                     if (activeSession != null) {
-                                      await backendNotifier.stopSession(sessionId: activeSession.id);
+                                      await backendNotifier.stopSession(
+                                        sessionId: activeSession.id,
+                                      );
                                     }
                                   } else {
-                                    await backendNotifier.startSession(projectId: project.id);
+                                    await backendNotifier.startSession(
+                                      projectId: project.id,
+                                    );
                                   }
                                 },
                                 controlKey: _controlKey,
@@ -409,13 +459,20 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                                 key: _endpointKey,
                                 serviceId: serviceId,
                                 repo: repoLabel,
-                                liveUrl: liveUrl.replaceFirst(RegExp(r'^https?://'), ''),
+                                liveUrl: liveUrl.replaceFirst(
+                                  RegExp(r'^https?://'),
+                                  '',
+                                ),
                                 subdomain: subdomainUrl,
                                 subdomainStatus: project.liveUrlStatus,
                                 onCopyId: () {
-                                  Clipboard.setData(ClipboardData(text: apiUrl));
+                                  Clipboard.setData(
+                                    ClipboardData(text: apiUrl),
+                                  );
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('API URL copied')),
+                                    const SnackBar(
+                                      content: Text('API URL copied'),
+                                    ),
                                   );
                                 },
                                 onOpenUrl: () => _openUrl(subdomainUrl),
@@ -426,27 +483,33 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                               // 3. Environment Variables
                               _EnvVariablesSection(
                                 envVars: project.envVars,
-                                onManage: () => Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder:
-                                        (_) => EnvManagementPage(
-                                          projectId: project.id,
-                                        ),
-                                  ),
-                                ),
+                                onManage:
+                                    () => Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder:
+                                            (_) => EnvManagementPage(
+                                              projectId: project.id,
+                                            ),
+                                      ),
+                                    ),
                               ),
                               const SizedBox(height: 48),
 
                               // 4. System Status
                               _SystemStatusSection(
                                 key: _configKey,
-                                deviceLabel: device.cpuLabel.isNotEmpty ? device.cpuLabel : 'IQOO 9se',
+                                deviceLabel:
+                                    device.cpuLabel.isNotEmpty
+                                        ? device.cpuLabel
+                                        : 'IQOO 9se',
                                 batteryPercent: device.batteryPercent,
                                 charging: device.batteryCharging,
                                 cpuPct: cpuPct,
-                                ramLabel: '${ramUsed.toStringAsFixed(1)}GB / ${device.ramGb}GB',
+                                ramLabel:
+                                    '${ramUsed.toStringAsFixed(1)}GB / ${device.ramGb}GB',
                                 ramPct: ramPct,
-                                storageLabel: '${device.freeStorageGb.toStringAsFixed(1)}GB free',
+                                storageLabel:
+                                    '${device.freeStorageGb.toStringAsFixed(1)}GB free',
                                 storagePct: storagePct,
                               ),
                               const SizedBox(height: 48),
@@ -471,7 +534,10 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                                 showCustomRange: _showCustomRange,
                                 logsFullscreen: _logsFullscreen,
                                 onSearchChanged: () => setState(() {}),
-                                onToggleFullscreen: () => setState(() => _logsFullscreen = !_logsFullscreen),
+                                onToggleFullscreen:
+                                    () => setState(
+                                      () => _logsFullscreen = !_logsFullscreen,
+                                    ),
                                 onScrollToBottom: _scrollLogsToBottom,
                                 onTimeRangeTap: () {
                                   setState(() {
@@ -487,7 +553,10 @@ class _ProjectDetailPageState extends ConsumerState<ProjectDetailPage> {
                                     _timeRange = 'custom range';
                                   });
                                 },
-                                onCancelCustomRange: () => setState(() => _showCustomRange = false),
+                                onCancelCustomRange:
+                                    () => setState(
+                                      () => _showCustomRange = false,
+                                    ),
                               ),
                             ],
                           ),
@@ -754,7 +823,8 @@ class _ProjectHeaderIntro extends StatelessWidget {
                   isRunning
                       ? _DetailPalette.statusSuspended
                       : _DetailPalette.primary,
-              foregroundColor: isRunning ? Colors.white : _DetailPalette.onPrimary,
+              foregroundColor:
+                  isRunning ? Colors.white : _DetailPalette.onPrimary,
             );
 
             if (stacked) {
@@ -898,7 +968,10 @@ class _MetadataGrid extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'project subdomain · $subdomainStatus',
-                    style: const TextStyle(fontSize: 10, color: _DetailPalette.onSurfaceVariant),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: _DetailPalette.onSurfaceVariant,
+                    ),
                   ),
                   Row(
                     children: [
@@ -940,7 +1013,10 @@ class _MetadataGrid extends StatelessWidget {
               children: [
                 for (var i = 0; i < cells.length; i++) ...[
                   if (i > 0)
-                    const Divider(height: 1, color: _DetailPalette.outlineVariant),
+                    const Divider(
+                      height: 1,
+                      color: _DetailPalette.outlineVariant,
+                    ),
                   cells[i],
                 ],
               ],
@@ -951,9 +1027,15 @@ class _MetadataGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: cells[0]),
-                const VerticalDivider(width: 1, color: _DetailPalette.outlineVariant),
+                const VerticalDivider(
+                  width: 1,
+                  color: _DetailPalette.outlineVariant,
+                ),
                 Expanded(child: cells[1]),
-                const VerticalDivider(width: 1, color: _DetailPalette.outlineVariant),
+                const VerticalDivider(
+                  width: 1,
+                  color: _DetailPalette.outlineVariant,
+                ),
                 Expanded(child: cells[2]),
               ],
             ),
@@ -1380,7 +1462,10 @@ class _ActiveRuntimeSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusLabel = isRunning ? 'online' : 'offline';
-    final statusColor = isRunning ? _DetailPalette.successGreen : _DetailPalette.onSurfaceVariant;
+    final statusColor =
+        isRunning
+            ? _DetailPalette.successGreen
+            : _DetailPalette.onSurfaceVariant;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1405,10 +1490,7 @@ class _ActiveRuntimeSection extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    _PulseStatusIndicator(
-                      color: statusColor,
-                      pulse: isRunning,
-                    ),
+                    _PulseStatusIndicator(color: statusColor, pulse: isRunning),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
@@ -1751,8 +1833,13 @@ class _CustomRangePicker extends StatelessWidget {
     final now = DateTime.now();
     final oneHourAgo = now.subtract(const Duration(hours: 1));
     final offsetStr = now.timeZoneOffset.isNegative ? '-' : '+';
-    final offsetHours = now.timeZoneOffset.inHours.abs().toString().padLeft(2, '0');
-    final offsetMinutes = (now.timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final offsetHours = now.timeZoneOffset.inHours.abs().toString().padLeft(
+      2,
+      '0',
+    );
+    final offsetMinutes = (now.timeZoneOffset.inMinutes.abs() % 60)
+        .toString()
+        .padLeft(2, '0');
     final tzLabel = 'GMT$offsetStr$offsetHours:$offsetMinutes';
 
     return Container(
@@ -1781,14 +1868,17 @@ class _CustomRangePicker extends StatelessWidget {
           const SizedBox(height: 24),
           _RangeField(
             label: 'START ($tzLabel)',
-            date: '${_monthName(oneHourAgo)} ${oneHourAgo.day} ${oneHourAgo.year}',
-            time: '${oneHourAgo.hour.toString().padLeft(2, '0')}:${oneHourAgo.minute.toString().padLeft(2, '0')}:${oneHourAgo.second.toString().padLeft(2, '0')}',
+            date:
+                '${_monthName(oneHourAgo)} ${oneHourAgo.day} ${oneHourAgo.year}',
+            time:
+                '${oneHourAgo.hour.toString().padLeft(2, '0')}:${oneHourAgo.minute.toString().padLeft(2, '0')}:${oneHourAgo.second.toString().padLeft(2, '0')}',
           ),
           const SizedBox(height: 16),
           _RangeField(
             label: 'END ($tzLabel)',
             date: '${_monthName(now)} ${now.day} ${now.year}',
-            time: '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}',
+            time:
+                '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}',
           ),
           const SizedBox(height: 24),
           Row(
@@ -1810,8 +1900,18 @@ class _CustomRangePicker extends StatelessWidget {
 
   String _monthName(DateTime dt) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return months[dt.month - 1];
   }

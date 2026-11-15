@@ -6,6 +6,7 @@ import 'package:buildify_flutter/pages/projects_home_page.dart';
 import 'package:buildify_flutter/pages/ai_model_select_page.dart';
 import 'package:buildify_flutter/screens/ai_server_shell.dart';
 import 'package:buildify_flutter/screens/network_screen.dart';
+import 'package:buildify_flutter/theme/app_theme.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,12 +15,16 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({
       'buildify_user_tour_status': '1',
       'buildify_has_completed_guided_tour': '1',
+      'buildify_tour_ai_shell': '1',
     });
   });
 
   Widget createTestApp({Widget? home}) {
     return ProviderScope(
-      child: MaterialApp(home: home ?? const ProjectsHomePage()),
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        home: home ?? const ProjectsHomePage(),
+      ),
     );
   }
 
