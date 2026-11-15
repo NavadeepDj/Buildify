@@ -40,7 +40,7 @@ class VoiceAction {
   };
 }
 
-/// Only local UI calls approve. Remote tools can request or inspect actions.
+/// Local UI and the paired-owner confirmation tool can approve eligible actions.
 class VoiceActionQueue extends StateNotifier<List<VoiceAction>> {
   VoiceActionQueue({required this.execute, DateTime Function()? clock})
     : clock = clock ?? DateTime.now,

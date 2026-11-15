@@ -19,6 +19,7 @@
         "license": "apache-2.0",
         "contextTokens": 2048,
         "runtimeOverheadBytes": 536870912,
+        "desktopRuntimeOverheadBytes": 268435456,
         "contextMemoryBytes": 1073741824,
         "format": "gguf",
         "runtime": "llama.cpp",

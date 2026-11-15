@@ -121,12 +121,34 @@ class VoiceToolRuntime {
       return {'ok': false, 'error': 'invalid_tool_or_arguments'};
     }
     try {
+      if (name == 'confirm_model_action') {
+        final id = args['action_id'] as String;
+        final action =
+            ref.read(voiceActionsProvider).where((a) => a.id == id).firstOrNull;
+        const allowed = {
+          'stop_model',
+          'share_model',
+          'make_model_private',
+          'select_model',
+          'download_model',
+          'cancel_model_download',
+          'cancel_model_setup',
+        };
+        if (action == null || !allowed.contains(action.tool)) {
+          return {
+            'ok': false,
+            'error': 'model_action_not_eligible_for_voice_confirmation',
+          };
+        }
+        unawaited(ref.read(voiceActionsProvider.notifier).approve(id));
+        return ref.read(voiceActionsProvider.notifier).status(id);
+      }
       if (name == 'list_capabilities') {
         return {
           'ok': true,
           'tools': voiceToolSpecs.map((s) => s.toJson()).toList(),
           'policy':
-              'State-changing tools request local approval; no voice/API execution approval. Single paired demo host only.',
+              'Paired-owner voice approval runs prepared model plans and eligible reversible model actions. Project actions and deletions still require local review. Single paired demo host only.',
         };
       }
       if (name == 'get_host_status') {
@@ -194,6 +216,10 @@ class VoiceToolRuntime {
           'state': host.snapshot.status.name,
           'model_id': host.snapshot.selectedModelId,
           'local_base_url': '${host.apiBaseUrl}/v1',
+          'public_base_url':
+              host.snapshot.tunnel.publicUrl == null
+                  ? null
+                  : '${host.snapshot.tunnel.publicUrl}/v1',
           'authentication_required': host.snapshot.security.requireApiKey,
           'health_verified': false,
           'scope': host.modelAccessScope.name,
@@ -380,10 +406,15 @@ class VoiceToolRuntime {
           verifier.close();
         }
       case 'stop_model':
+        final stoppedModel = host.selectedModel;
         await host.stopServer();
         return {
           'ok': host.snapshot.status == ServerStatus.stopped,
           'state': host.snapshot.status.name,
+          'model_id': stoppedModel.id,
+          'model_name': stoppedModel.name,
+          if (host.snapshot.status == ServerStatus.stopped)
+            'stopped_at': DateTime.now().toUtc().toIso8601String(),
         };
       case 'cancel_model_setup':
         await ref.read(assistantSetupProvider.notifier).cancel();
@@ -439,13 +470,8 @@ class VoiceToolRuntime {
           'low_power': host.snapshot.lowPowerMode,
         };
       case 'share_model':
-        if (!host.snapshot.security.requireApiKey ||
-            host.snapshot.security.apiKey.isEmpty ||
-            host.snapshot.status != ServerStatus.running) {
-          return {
-            'ok': false,
-            'error': 'configure_api_key_locally_and_start_model_first',
-          };
+        if (host.snapshot.status != ServerStatus.running) {
+          return {'ok': false, 'error': 'start_model_first'};
         }
         await host.setModelAccessScope(ModelAccessScope.public);
         final started = await host.startTunnel();

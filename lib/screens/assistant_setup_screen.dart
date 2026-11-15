@@ -5,6 +5,7 @@ import '../assistant/model_operations.dart';
 import '../assistant/model_recommendation.dart';
 import '../assistant/setup_controller.dart';
 import '../assistant/cloud_intent.dart';
+import '../assistant/status_probe_provider.dart';
 import '../models/ai_server_models.dart';
 import '../providers/hosted_account_provider.dart';
 import '../providers/ai_server_provider.dart';
@@ -273,7 +274,7 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
                       'Download: ${(plan.downloadBytes / 1048576).toStringAsFixed(0)} MiB; an existing file is verified before reuse.',
                     ),
                     Text(
-                      'Memory budget: ${(candidate.model.requirements!.estimatedMemoryBytes / 1073741824).toStringAsFixed(1)} GiB, plus host reserve.',
+                      'Memory budget: ${(candidate.estimatedMemoryBytes! / 1073741824).toStringAsFixed(2)} GiB, plus host reserve.',
                     ),
                     Text('Context: ${plan.contextTokens} tokens.'),
                     const Text(
@@ -294,7 +295,7 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
                       FilledButton(
                         onPressed:
                             state.record == null
-                                ? controller.approveAndRun
+                                ? () => approveModelSetupFromOwnerUi(ref, plan)
                                 : null,
                         child: const Text('Approve and run'),
                       ),
@@ -323,6 +324,19 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             SelectableText('${state.endpoint}/v1'),
+            if (connectionActive && host.tunnel.publicUrl != null) ...[
+              const SizedBox(height: 8),
+              const Text('Public API endpoint'),
+              SelectableText('${host.tunnel.publicUrl}/v1'),
+              OutlinedButton.icon(
+                onPressed:
+                    () => Clipboard.setData(
+                      ClipboardData(text: '${host.tunnel.publicUrl}/v1'),
+                    ),
+                icon: const Icon(Icons.copy),
+                label: const Text('Copy public URL'),
+              ),
+            ],
             Text('Model: ${plan!.modelId}'),
             Text(
               'Test request: ${state.inferenceDuration?.inMilliseconds ?? 0} ms. This is one test, not a benchmark.',
@@ -330,7 +344,7 @@ class _AssistantSetupScreenState extends ConsumerState<AssistantSetupScreen> {
             Text(
               host.security.requireApiKey
                   ? 'Use the API key configured in Security & Safety.'
-                  : 'This local endpoint currently has no API-key requirement.',
+                  : 'No API key or authorization header required.',
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(

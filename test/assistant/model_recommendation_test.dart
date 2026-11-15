@@ -183,6 +183,49 @@ void main() {
       isNull,
     );
   });
+  test('low-memory setup reduces context and retains the host reserve', () {
+    final tiny = models.first;
+    ModelCandidate candidate(double available) =>
+        service
+            .recommend(
+              models: [tiny],
+              device: device(memory: available),
+              runtime: runtime(),
+              now: now,
+              allowReducedContext: true,
+            )
+            .candidates
+            .single;
+    expect(candidate(8).contextTokens, 2048);
+    expect(candidate(2.0).contextTokens, 1024);
+    expect(candidate(2.0).eligible, true);
+    expect(candidate(1.8).contextTokens, 512);
+    expect(candidate(1.8).eligible, true);
+    expect(candidate(1.6).contextTokens, 256);
+    expect(candidate(1.6).eligible, true);
+    expect(candidate(1.4).blockers, contains('insufficient_memory'));
+    final required =
+        tiny.requirements!.estimatedMemoryBytesForContext(256, desktop: true) +
+        service.memoryReserveBytes;
+    expect(candidate(required / 1073741824).eligible, true);
+    expect(candidate((required - 1) / 1073741824).eligible, false);
+    expect(candidate(2).toJson()['contextTokens'], 1024);
+    expect(
+      tiny.requirements!.estimatedMemoryBytesForContext(512),
+      greaterThan(
+        tiny.requirements!.estimatedMemoryBytesForContext(512, desktop: true),
+      ),
+    );
+    expect(
+      () => tiny.requirements!.estimatedMemoryBytesForContext(4096),
+      throwsRangeError,
+    );
+    // Other recommendation consumers retain the full catalog budget by default.
+    expect(
+      result(host: device(memory: 2), catalog: [tiny]).recommended,
+      isNull,
+    );
+  });
   test('unsupported format and absent catalog metadata remain blocked', () {
     final broken = Map<String, dynamic>.from(raw.first as Map);
     broken['requirements'] = {

@@ -267,6 +267,13 @@ class DesktopServerBridge implements ServerBridge {
         '127.0.0.1',
         '--port',
         '$port',
+        // The assistant budgets one request at a time on this local device.
+        '--parallel',
+        '1',
+        '--batch-size',
+        '128',
+        '--ubatch-size',
+        '128',
         if (contextTokens != null) ...['--ctx-size', '$contextTokens'],
         if (apiKey != null && apiKey.isNotEmpty) ...['--api-key', apiKey],
       ];

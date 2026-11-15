@@ -35,10 +35,19 @@ class ModelCandidate {
     required this.model,
     required this.reuseInstalled,
     required Iterable<String> blockers,
+    this.contextTokens,
+    this.desktopBudget = false,
   }) : blockers = List.unmodifiable(blockers);
   final ModelProfile model;
   final bool reuseInstalled;
   final List<String> blockers;
+  final int? contextTokens;
+  final bool desktopBudget;
+  int? get estimatedMemoryBytes =>
+      model.requirements?.estimatedMemoryBytesForContext(
+        contextTokens ?? model.requirements!.contextTokens,
+        desktop: desktopBudget,
+      );
   bool get eligible => blockers.isEmpty;
   Map<String, Object?> toJson() => {
     'modelId': model.id,
@@ -46,8 +55,8 @@ class ModelCandidate {
     'blockers': blockers,
     'reuseInstalled': reuseInstalled,
     'downloadBytes': reuseInstalled ? 0 : model.requirements?.bytes,
-    'estimatedMemoryBytes': model.requirements?.estimatedMemoryBytes,
-    'contextTokens': model.requirements?.contextTokens,
+    'estimatedMemoryBytes': estimatedMemoryBytes,
+    'contextTokens': contextTokens ?? model.requirements?.contextTokens,
     'estimateKind': 'conservative_budget_not_benchmark',
     'performanceVerified': false,
   };
@@ -98,6 +107,7 @@ class ModelRecommendationService {
     ModelPreference preference = ModelPreference.balanced,
     String task = 'short_answers',
     List<VerifiedInstalledModel> installed = const [],
+    bool allowReducedContext = false,
   }) {
     bool fresh(DateTime read) =>
         !read.isAfter(now) && now.difference(read) <= maxAge;
@@ -109,6 +119,10 @@ class ModelRecommendationService {
         models.map((model) {
           final requirements = model.requirements;
           final blockers = <String>[];
+          var contextTokens = requirements?.contextTokens;
+          final desktopBudget =
+              allowReducedContext &&
+              metrics?.platform == AssistantHostPlatform.windows;
           final reuse =
               requirements != null &&
               installed.any(
@@ -139,10 +153,37 @@ class ModelRecommendationService {
               blockers.add('format_unsupported');
             }
             final available = metrics?.availableMemoryGiB;
+            if (allowReducedContext &&
+                available != null &&
+                available.isFinite &&
+                available >= 0) {
+              // Largest bounded context fitting the budget, one inference slot.
+              for (final tokens in {
+                requirements.contextTokens,
+                1024,
+                512,
+                256,
+              }) {
+                if (tokens > requirements.contextTokens) continue;
+                contextTokens = tokens;
+                if (available * 1073741824 >=
+                    requirements.estimatedMemoryBytesForContext(
+                          tokens,
+                          desktop: desktopBudget,
+                        ) +
+                        memoryReserveBytes) {
+                  break;
+                }
+              }
+            }
             if (available == null || !available.isFinite || available < 0) {
               blockers.add('available_memory_unknown');
             } else if (available * 1073741824 <
-                requirements.estimatedMemoryBytes + memoryReserveBytes) {
+                requirements.estimatedMemoryBytesForContext(
+                      contextTokens!,
+                      desktop: desktopBudget,
+                    ) +
+                    memoryReserveBytes) {
               blockers.add('insufficient_memory');
             }
             if (!reuse) {
@@ -159,6 +200,8 @@ class ModelRecommendationService {
             model: model,
             reuseInstalled: reuse,
             blockers: blockers,
+            contextTokens: contextTokens,
+            desktopBudget: desktopBudget,
           );
         }).toList();
     candidates.sort((a, b) {
