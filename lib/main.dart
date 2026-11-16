@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,9 +13,11 @@ import 'screens/ai_server_shell.dart';
 import 'services/app_route_observer.dart';
 import 'theme/app_palette.dart';
 import 'providers/hosted_account_provider.dart';
+import 'providers/ai_server_provider.dart';
 import 'providers/management_account_provider.dart';
 import 'services/hosted_auth_config.dart';
 import 'services/management_api_config.dart';
+import 'services/mobile_catalog_sync.dart';
 import 'services/secure_auth_storage.dart';
 import 'services/windows_app_storage.dart';
 
@@ -77,11 +81,22 @@ Future<void> main() async {
   );
 }
 
+final _mobileCatalogSyncProvider = Provider<void>((ref) {
+  final client = ref.watch(hostedClientProvider);
+  if (client == null || !(Platform.isAndroid || Platform.isIOS)) return;
+  final sync = MobileCatalogSync(
+    client,
+    () => ref.read(embeddedBackendProvider),
+  );
+  ref.onDispose(sync.dispose);
+});
+
 class BuildifyApp extends ConsumerWidget {
   const BuildifyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(_mobileCatalogSyncProvider);
     final base = ThemeData.dark(useMaterial3: true);
     return MaterialApp(
       debugShowCheckedModeBanner: false,

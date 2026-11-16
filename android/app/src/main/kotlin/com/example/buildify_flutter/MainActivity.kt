@@ -7,6 +7,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.provider.Settings
 import android.text.format.Formatter
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -23,6 +24,20 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "getMobileDeviceName" -> {
+                        val name = Settings.Global.getString(contentResolver, "device_name")?.trim()
+                        val iqoo = Regex("""\biqoo\b""", RegexOption.IGNORE_CASE)
+                        val deviceName = when {
+                            name != null && iqoo.containsMatchIn(name) ->
+                                name.replaceFirst(iqoo, "iQOO")
+                            iqoo.containsMatchIn(Build.MODEL) ->
+                                Build.MODEL.replaceFirst(iqoo, "iQOO")
+                            Build.BRAND.equals("iQOO", ignoreCase = true) ||
+                                Build.MANUFACTURER.equals("iQOO", ignoreCase = true) -> "iQOO"
+                            else -> name?.takeIf { it.isNotBlank() } ?: Build.MODEL
+                        }
+                        result.success(deviceName)
+                    }
                     "getGatewayConnectorToken" -> result.success(BuildConfig.CF_TUNNEL_TOKEN)
                     "startServer" -> {
                         val modelPath = call.argument<String>("modelPath")
