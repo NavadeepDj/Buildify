@@ -82,6 +82,13 @@ flutter:
     - assets/github.svg
     - assets/google_fonts/
 
+  fonts:
+    - family: Space Mono
+      fonts:
+        - asset: assets/google_fonts/SpaceMono-Regular.ttf
+        - asset: assets/google_fonts/SpaceMono-Bold.ttf
+          weight: 700
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

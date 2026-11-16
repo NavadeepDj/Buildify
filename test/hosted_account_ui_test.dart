@@ -108,7 +108,9 @@ void main() {
       await mount(tester, FakeAccountService(isConfigured: false));
       expect(
         tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Sign in'))
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, '[ AUTHENTICATE_SESSION -> ]'),
+            )
             .onPressed,
         isNull,
       );
@@ -124,12 +126,14 @@ void main() {
     final service = FakeAccountService()..failLogin = true;
     await mount(tester, service);
     await fillLogin(tester);
-    await tester.tap(find.text('Sign in'));
+    await tester.tap(find.text('[ AUTHENTICATE_SESSION -> ]'));
     await tester.pumpAndSettle();
     expect(find.text('Email or password is incorrect.'), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Sign in'))
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, '[ AUTHENTICATE_SESSION -> ]'),
+          )
           .onPressed,
       isNotNull,
     );
@@ -139,17 +143,27 @@ void main() {
     tester,
   ) async {
     await mount(tester, FakeAccountService());
-    await tester.tap(find.text('New to Buildify? Create an account'));
+    await tester.tap(find.text('[ CREATE AN ACCOUNT ]'));
     await tester.pump();
     await tester.enterText(find.byKey(const Key('account-name')), 'Test');
     await fillLogin(tester);
-    await tester.tap(find.text('Create account'));
+    final confirmation = find.byKey(const Key('account-confirm-password'));
+    final submit = find.text('[ INITIALIZE ACCOUNT -> ]');
+    await tester.enterText(confirmation, 'different123');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+    expect(find.text('Passwords do not match.'), findsOneWidget);
+    expect(find.byKey(const Key('account-code')), findsNothing);
+    await tester.enterText(confirmation, 'password123');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
     await tester.pump();
     expect(find.byKey(const Key('account-code')), findsOneWidget);
     expect(find.text('Resend in 60s'), findsOneWidget);
     await tester.tap(find.text('Back to sign in'));
     await tester.pump();
-    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('[ AUTHENTICATE_SESSION -> ]'), findsOneWidget);
     expect(find.byKey(const Key('account-name')), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
@@ -159,7 +173,7 @@ void main() {
       final service = FakeAccountService();
       await mount(tester, service);
       await fillLogin(tester);
-      await tester.tap(find.text('Sign in'));
+      await tester.tap(find.text('[ AUTHENTICATE_SESSION -> ]'));
       await tester.pump();
       await tester.tap(find.text('Resend verification email'));
       await tester.pump();
@@ -189,7 +203,7 @@ void main() {
         FakeAccountService()..pendingLogin = Completer<AccountResult>();
     await mount(tester, service);
     await fillLogin(tester);
-    await tester.tap(find.text('Sign in'));
+    await tester.tap(find.text('[ AUTHENTICATE_SESSION -> ]'));
     await tester.pump();
     expect(find.text('Please wait…'), findsOneWidget);
     expect(
