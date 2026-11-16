@@ -84,6 +84,7 @@ void main() {
                       (_) => const Scaffold(body: Text('Signed-in dashboard')),
                 ),
             '/projects': (_) => const Scaffold(body: Text('Local dashboard')),
+            '/account': (_) => const HostedAccountPage(),
           },
         ),
       ),
@@ -197,6 +198,17 @@ void main() {
       ),
     );
     expect(find.text('Signed-in dashboard'), findsOneWidget);
+    unawaited(
+      Navigator.of(
+        tester.element(find.text('Signed-in dashboard')),
+      ).pushNamed<void>('/account'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Your account'), findsOneWidget);
+    expect(find.text('test@example.com'), findsOneWidget);
+    await tester.tap(find.text('Sign out'));
+    await tester.pumpAndSettle();
+    expect(find.text('[ AUTHENTICATE_SESSION -> ]'), findsOneWidget);
   });
   testWidgets('pending login prevents duplicate submission', (tester) async {
     final service =

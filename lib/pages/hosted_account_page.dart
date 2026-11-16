@@ -179,22 +179,160 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
     return _signup && value.length < 8 ? 'Use at least 8 characters.' : null;
   }
 
+  static const muted = Color(0xFFC4C7C8);
+  static const caption = TextStyle(
+    fontFamily: 'Space Mono',
+    color: muted,
+    fontSize: 10,
+    height: 1.4,
+  );
+  static const label = TextStyle(
+    fontFamily: 'Space Mono',
+    color: muted,
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1,
+  );
+  Widget _buildAccountHeader(String title, {bool creatingAccount = false}) {
+    return Column(
+      children: [
+        Center(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: creatingAccount ? 64 : 56,
+                height: creatingAccount ? 64 : 56,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color:
+                      creatingAccount
+                          ? const Color(0xFF20201E)
+                          : const Color(0xFF2A2A29),
+                  borderRadius: BorderRadius.circular(creatingAccount ? 12 : 8),
+                ),
+                child: BuildifyLogo(size: creatingAccount ? 48 : 40),
+              ),
+              Positioned(
+                top: creatingAccount ? 4 : -4,
+                right: creatingAccount ? 4 : -4,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox.square(dimension: creatingAccount ? 8 : 10),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: label.copyWith(
+            color: Colors.white,
+            fontSize: 18,
+            height: 24 / 18,
+            letterSpacing: -0.45,
+          ),
+        ),
+      ],
+    );
+  }
+
+  ButtonStyle _primaryButtonStyle(BorderRadius radius) =>
+      FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF2F3131),
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        textStyle: const TextStyle(
+          fontFamily: 'Space Mono',
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1,
+        ),
+      );
+
+  Widget _buildAccountLayout({
+    required Widget content,
+    Widget? footer,
+    bool showCard = true,
+    bool showBack = false,
+  }) {
+    const background = Color(0xFF131312);
+    const padding = EdgeInsets.symmetric(horizontal: 16, vertical: 24);
+    return Scaffold(
+      backgroundColor: background,
+      appBar:
+          showBack
+              ? AppBar(
+                backgroundColor: background,
+                foregroundColor: Colors.white,
+              )
+              : null,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder:
+              (context, viewport) => SingleChildScrollView(
+                padding: padding,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: viewport.deflate(padding).maxHeight,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showCard)
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1B1B19),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black38,
+                                    blurRadius: 42,
+                                    offset: Offset(0, 22),
+                                  ),
+                                ],
+                              ),
+                              child: content,
+                            )
+                          else
+                            content,
+                          const SizedBox(height: 12),
+                          if (footer != null) footer,
+                          OutlinedButton(
+                            onPressed:
+                                _busy
+                                    ? null
+                                    : () => Navigator.of(
+                                      context,
+                                    ).pushNamed('/projects'),
+                            child: const Text(
+                              'Continue with local hosting',
+                              style: caption,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAuthForm(bool configured, String? startupMessage) {
     final creatingAccount = _signup && !_verify;
-    const muted = Color(0xFFC4C7C8);
-    const caption = TextStyle(
-      fontFamily: 'Space Mono',
-      color: muted,
-      fontSize: 10,
-      height: 1.4,
-    );
-    const label = TextStyle(
-      fontFamily: 'Space Mono',
-      color: muted,
-      fontSize: 10,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 1,
-    );
     final micro = label.copyWith(fontSize: 8, letterSpacing: 0.8);
     final radius = BorderRadius.circular(creatingAccount ? 4 : 8);
     const fieldText = TextStyle(
@@ -297,55 +435,13 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: creatingAccount ? 64 : 56,
-                    height: creatingAccount ? 64 : 56,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color:
-                          creatingAccount
-                              ? const Color(0xFF20201E)
-                              : const Color(0xFF2A2A29),
-                      borderRadius: BorderRadius.circular(
-                        creatingAccount ? 12 : 8,
-                      ),
-                    ),
-                    child: BuildifyLogo(size: creatingAccount ? 48 : 40),
-                  ),
-                  Positioned(
-                    top: creatingAccount ? 4 : -4,
-                    right: creatingAccount ? 4 : -4,
-                    child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: SizedBox.square(
-                        dimension: creatingAccount ? 8 : 10,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
+            _buildAccountHeader(
               _verify
                   ? 'Verify your email'
                   : creatingAccount
                   ? 'init_account // register'
                   : 'welcome back, engineer.',
-              textAlign: TextAlign.center,
-              style: label.copyWith(
-                color: Colors.white,
-                fontSize: 18,
-                height: 24 / 18,
-                letterSpacing: -0.45,
-              ),
+              creatingAccount: creatingAccount,
             ),
             SizedBox(height: creatingAccount ? 24 : 48),
             const Divider(color: Color(0xFF353533), height: 1),
@@ -532,12 +628,7 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _busy || !configured ? null : _submit,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF2F3131),
-                shape: RoundedRectangleBorder(borderRadius: radius),
-              ),
+              style: _primaryButtonStyle(radius),
               child: Text(
                 _busy
                     ? (creatingAccount
@@ -548,12 +639,6 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
                         : creatingAccount
                         ? '[ INITIALIZE ACCOUNT -> ]'
                         : '[ AUTHENTICATE_SESSION -> ]'),
-                style: const TextStyle(
-                  fontFamily: 'Space Mono',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
               ),
             ),
             if (_verify)
@@ -587,94 +672,38 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
       ),
     );
 
-    const padding = EdgeInsets.symmetric(horizontal: 16, vertical: 24);
-    return Scaffold(
-      backgroundColor: const Color(0xFF131312),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder:
-              (context, viewport) => SingleChildScrollView(
-                padding: padding,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: viewport.deflate(padding).maxHeight,
+    return _buildAccountLayout(
+      content: credentials,
+      showCard: !creatingAccount,
+      footer:
+          _verify
+              ? TextButton(
+                onPressed: _busy ? null : _resetForm,
+                child: Text(
+                  'Back to sign in',
+                  style: label.copyWith(color: Colors.white),
+                ),
+              )
+              : Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 6,
+                children: [
+                  Text(
+                    creatingAccount
+                        ? 'Already have credentials?'
+                        : 'New to Buildify?',
+                    style: caption,
                   ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 480),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (creatingAccount)
-                            credentials
-                          else
-                            Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1B1B19),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black38,
-                                    blurRadius: 42,
-                                    offset: Offset(0, 22),
-                                  ),
-                                ],
-                              ),
-                              child: credentials,
-                            ),
-                          const SizedBox(height: 12),
-                          if (_verify)
-                            TextButton(
-                              onPressed: _busy ? null : _resetForm,
-                              child: Text(
-                                'Back to sign in',
-                                style: label.copyWith(color: Colors.white),
-                              ),
-                            )
-                          else
-                            Wrap(
-                              alignment: WrapAlignment.center,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 6,
-                              children: [
-                                Text(
-                                  creatingAccount
-                                      ? 'Already have credentials?'
-                                      : 'New to Buildify?',
-                                  style: caption,
-                                ),
-                                TextButton(
-                                  onPressed: _busy ? null : _toggleSignup,
-                                  child: Text(
-                                    creatingAccount
-                                        ? '[ Sign in ]'
-                                        : '[ CREATE AN ACCOUNT ]',
-                                    style: label.copyWith(color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          OutlinedButton(
-                            onPressed:
-                                _busy
-                                    ? null
-                                    : () => Navigator.of(
-                                      context,
-                                    ).pushNamed('/projects'),
-                            child: const Text(
-                              'Continue with local hosting',
-                              style: caption,
-                            ),
-                          ),
-                        ],
-                      ),
+                  TextButton(
+                    onPressed: _busy ? null : _toggleSignup,
+                    child: Text(
+                      creatingAccount ? '[ Sign in ]' : '[ CREATE AN ACCOUNT ]',
+                      style: label.copyWith(color: Colors.white),
                     ),
                   ),
-                ),
+                ],
               ),
-        ),
-      ),
     );
   }
 
@@ -686,79 +715,64 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
     if (account == null) {
       return _buildAuthForm(service.isConfigured, startupMessage);
     }
-    return Scaffold(
-      appBar: AppBar(title: const Text('Buildify account')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Form(
-              key: _form,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Your account',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 12),
-                  ManagementAccountPanel(
-                    fallbackName: account.name,
-                    onSignInAgain:
-                        _busy
-                            ? null
-                            : () => _perform((service) async {
-                              await service.signOut();
-                              _complete();
-                            }),
-                  ),
-                  Text(account.email),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Signing out ends this account session. It does not delete or stop local projects.',
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed:
-                        _busy
-                            ? null
-                            : () => _perform((service) async {
-                              await service.signOut();
-                              _complete();
-                            }),
-                    child: const Text('Sign out'),
-                  ),
-                  if (_message != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          _message!,
-                          style: TextStyle(
-                            color:
-                                _isError
-                                    ? Theme.of(context).colorScheme.error
-                                    : null,
-                          ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed:
-                        _busy
-                            ? null
-                            : () =>
-                                Navigator.of(context).pushNamed('/projects'),
-                    child: const Text('Continue with local hosting'),
-                  ),
-                ],
-              ),
+    Future<void> signOut() => _perform((service) async {
+      await service.signOut();
+      _complete();
+    });
+
+    return _buildAccountLayout(
+      showBack: true,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildAccountHeader('Your account'),
+          const SizedBox(height: 24),
+          const Divider(color: Color(0xFF353533), height: 1),
+          const SizedBox(height: 24),
+          DefaultTextStyle(
+            style: const TextStyle(
+              fontFamily: 'Space Mono',
+              color: Colors.white,
+              fontSize: 14,
+            ),
+            child: ManagementAccountPanel(
+              fallbackName: account.name,
+              onSignInAgain: _busy ? null : signOut,
             ),
           ),
-        ),
+          const SizedBox(height: 8),
+          const Text('EMAIL', style: label),
+          const SizedBox(height: 6),
+          Text(
+            account.email,
+            style: caption.copyWith(color: Colors.white, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Signing out ends this account session. It does not delete or stop local projects.',
+            style: caption,
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: _busy ? null : signOut,
+            style: _primaryButtonStyle(BorderRadius.circular(8)),
+            child: Text(_busy ? 'Please wait…' : 'Sign out'),
+          ),
+          if (_message != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  _message!,
+                  style: caption.copyWith(
+                    color:
+                        _isError ? Theme.of(context).colorScheme.error : muted,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

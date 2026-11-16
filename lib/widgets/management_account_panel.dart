@@ -32,19 +32,9 @@ class ManagementAccountPanel extends ConsumerWidget {
               (account) =>
                   account == null
                       ? const SizedBox.shrink()
-                      : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            account.displayName,
-                            key: const Key('management-display-name'),
-                          ),
-                          TextButton(
-                            onPressed:
-                                () => ref.invalidate(managementAccountProvider),
-                            child: const Text('Refresh profile'),
-                          ),
-                        ],
+                      : Text(
+                        account.displayName,
+                        key: const Key('management-display-name'),
                       ),
           loading:
               () => const Row(
