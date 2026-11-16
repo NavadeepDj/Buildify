@@ -7,7 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/ai_server_models.dart';
 import '../providers/ai_server_provider.dart';
 import '../backend/embedded_backend.dart';
+import '../services/app_route_observer.dart';
 import '../services/guided_tour_service.dart';
+import '../widgets/buildify_logo.dart';
 import '../widgets/guided_tour_overlay.dart';
 import 'deployment_page.dart';
 import 'host_project_wizard.dart';
@@ -34,12 +36,12 @@ class ProjectsHomePage extends ConsumerStatefulWidget {
 }
 
 class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RouteAware {
   static const _filters = ['all', 'services'];
 
   int _selectedFilter = 0;
-  bool _productionExpanded = true;
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   late final AnimationController _meshController;
 
   final _topBarKey = GlobalKey();
@@ -191,6 +193,23 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) appRouteObserver.subscribe(this, route);
+  }
+
+  @override
+  void didPushNext() {
+    _searchFocusNode.unfocus();
+  }
+
+  @override
+  void didPopNext() {
+    _searchFocusNode.unfocus();
+  }
+
   List<GuidedTourStep> _buildTourSteps() {
     return [
       GuidedTourStep(
@@ -242,8 +261,10 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _meshController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -335,6 +356,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                               _SearchSection(
                                 key: _searchKey,
                                 controller: _searchController,
+                                focusNode: _searchFocusNode,
                                 filters: _filters,
                                 selectedFilter: _selectedFilter,
                                 onFilterSelected:
@@ -347,13 +369,6 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                             delayOffset: 1,
                             children: [
                               _EnvironmentSection(
-                                expanded: _productionExpanded,
-                                onToggle:
-                                    () => setState(
-                                      () =>
-                                          _productionExpanded =
-                                              !_productionExpanded,
-                                    ),
                                 services: _filteredServices(
                                   getServices(state, customProjects),
                                 ),
@@ -514,41 +529,7 @@ class _ProjectsTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: _ProjectsPalette.onSurface,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              shape: const RoundedRectangleBorder(
-                side: BorderSide(color: Color(0x0DFFFFFF)),
-              ),
-            ),
-            onPressed: () {},
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.more_horiz,
-                  size: 20,
-                  color: _ProjectsPalette.onSurface,
-                ),
-                Text(
-                  'more',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                    color: _ProjectsPalette.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Icon(
-            Icons.architecture,
-            color: _ProjectsPalette.primary,
-            size: 28,
-          ),
+          const BuildifyLogo(),
           const SizedBox(width: 8),
           Text(
             'buildify',
@@ -591,12 +572,14 @@ class _SearchSection extends StatelessWidget {
   const _SearchSection({
     super.key,
     required this.controller,
+    required this.focusNode,
     required this.filters,
     required this.selectedFilter,
     required this.onFilterSelected,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final List<String> filters;
   final int selectedFilter;
   final ValueChanged<int> onFilterSelected;
@@ -608,6 +591,8 @@ class _SearchSection extends StatelessWidget {
       children: [
         TextField(
           controller: controller,
+          focusNode: focusNode,
+          onTapOutside: (_) => focusNode.unfocus(),
           style: GoogleFonts.spaceMono(
             fontSize: 14,
             color: _ProjectsPalette.onSurface,
@@ -687,16 +672,12 @@ class _SearchSection extends StatelessWidget {
 
 class _EnvironmentSection extends StatelessWidget {
   const _EnvironmentSection({
-    required this.expanded,
-    required this.onToggle,
     required this.services,
     required this.onNewService,
     this.newServiceKey,
     this.firstCardKey,
   });
 
-  final bool expanded;
-  final VoidCallback onToggle;
   final List<_ServiceData> services;
   final VoidCallback onNewService;
   final Key? newServiceKey;
@@ -707,121 +688,106 @@ class _EnvironmentSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        InkWell(
-          onTap: onToggle,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                AnimatedRotation(
-                  turns: expanded ? 0.25 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.chevron_right,
-                    color: _ProjectsPalette.outline.withValues(alpha: 0.4),
-                  ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              RotatedBox(
+                quarterTurns: 1,
+                child: Icon(
+                  Icons.chevron_right,
+                  color: _ProjectsPalette.outline.withValues(alpha: 0.4),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  'production',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: _ProjectsPalette.primary,
-                  ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'production',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.4,
+                  color: _ProjectsPalette.primary,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.1),
-                          Colors.transparent,
-                        ],
-                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.1),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 24),
-        if (expanded) ...[
-          if (services.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 36,
-                  horizontal: 24,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.02),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.06),
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _ProjectsPalette.primary.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.folder_open_outlined,
-                        size: 36,
-                        color: _ProjectsPalette.primary.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'no projects',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _ProjectsPalette.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No projects or active AI models found.\nTap "new service" below to host a project or run an AI model.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 12,
-                        color: _ProjectsPalette.onSurfaceVariant.withValues(
-                          alpha: 0.6,
-                        ),
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
+        if (services.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
-            )
-          else
-            ...services.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final s = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _ServiceCard(
-                  key: idx == 0 ? firstCardKey : null,
-                  data: s,
-                ),
-              );
-            }),
-          _NewServiceButton(key: newServiceKey, onPressed: onNewService),
-        ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _ProjectsPalette.primary.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.folder_open_outlined,
+                      size: 36,
+                      color: _ProjectsPalette.primary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'no projects',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _ProjectsPalette.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No projects or active AI models found.\nTap "+ Add New" below to host a project or run an AI model.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: _ProjectsPalette.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...services.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final s = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _ServiceCard(key: idx == 0 ? firstCardKey : null, data: s),
+            );
+          }),
+        _NewServiceButton(key: newServiceKey, onPressed: onNewService),
       ],
     );
   }

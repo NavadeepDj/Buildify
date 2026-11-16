@@ -1,23 +1,24 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../providers/ai_server_provider.dart';
 import 'project_detail_page.dart';
 
-class DeploymentPage extends StatefulWidget {
+class DeploymentPage extends ConsumerStatefulWidget {
   const DeploymentPage({super.key, required this.projectId});
 
   final String projectId;
 
   @override
-  State<DeploymentPage> createState() => _DeploymentPageState();
+  ConsumerState<DeploymentPage> createState() => _DeploymentPageState();
 }
 
-class _DeploymentPageState extends State<DeploymentPage> {
+class _DeploymentPageState extends ConsumerState<DeploymentPage> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  bool _startingServer = false;
 
   @override
   void dispose() {
@@ -39,6 +40,27 @@ class _DeploymentPageState extends State<DeploymentPage> {
     );
   }
 
+  Future<void> _startServer() async {
+    if (_startingServer) return;
+    setState(() => _startingServer = true);
+    try {
+      await ref
+          .read(embeddedBackendProvider)
+          .startSession(projectId: widget.projectId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Server started')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not start server: $error')));
+    } finally {
+      if (mounted) setState(() => _startingServer = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
@@ -57,13 +79,6 @@ class _DeploymentPageState extends State<DeploymentPage> {
         backgroundColor: _DeploymentColors.surface,
         body: Stack(
           children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 64 + top,
-              child: _Header(onBack: () => Navigator.of(context).maybePop()),
-            ),
             Positioned.fill(
               child: SingleChildScrollView(
                 padding: EdgeInsets.only(
@@ -75,7 +90,10 @@ class _DeploymentPageState extends State<DeploymentPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _ServiceMetaCard(onDeploy: _openDetails),
+                    _ServiceMetaCard(
+                      starting: _startingServer,
+                      onStartServer: _startServer,
+                    ),
                     const SizedBox(height: 16),
                     const _InactivityBanner(),
                     const SizedBox(height: 24),
@@ -101,6 +119,19 @@ class _DeploymentPageState extends State<DeploymentPage> {
                 ),
               ),
             ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 64 + top,
+              child: _Header(
+                onBack: () => Navigator.of(context).maybePop(),
+                onHome:
+                    () => Navigator.of(
+                      context,
+                    ).popUntil((route) => route.isFirst),
+              ),
+            ),
           ],
         ),
       ),
@@ -109,76 +140,73 @@ class _DeploymentPageState extends State<DeploymentPage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onBack});
+  const _Header({required this.onBack, required this.onHome});
 
   final VoidCallback onBack;
+  final VoidCallback onHome;
 
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-      child: Container(
-        color: _DeploymentColors.surface.withValues(alpha: 0.85),
-        padding: EdgeInsets.only(top: top),
-        child: SizedBox(
-          height: 64,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                _PressedScale(
-                  onTap: onBack,
-                  child: const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: Icon(
-                      Icons.arrow_back,
-                      size: 22,
-                      color: _DeploymentColors.onSurface,
-                    ),
+    return Container(
+      color: _DeploymentColors.surface,
+      padding: EdgeInsets.only(top: top),
+      child: SizedBox(
+        height: 64,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              _PressedScale(
+                onTap: onBack,
+                child: const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Icon(
+                    Icons.arrow_back,
+                    size: 22,
+                    color: _DeploymentColors.onSurface,
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.dns,
-                  size: 26,
-                  color: _DeploymentColors.onSurface,
+              ),
+              const SizedBox(width: 6),
+              TextButton(
+                onPressed: onHome,
+                style: TextButton.styleFrom(
+                  foregroundColor: _DeploymentColors.onSurface,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  '/',
+                child: Text(
+                  'home',
                   style: _DeploymentText.headlineLg(
                     color: _DeploymentColors.onSurface,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Deployment Logs',
-                    style: _DeploymentText.headlineLg(
-                      color: _DeploymentColors.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '/',
+                style: _DeploymentText.headlineLg(
+                  color: _DeploymentColors.onSurface,
                 ),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: const BoxDecoration(
-                    color: _DeploymentColors.primary,
-                    shape: BoxShape.circle,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Deployment Logs',
+                  style: _DeploymentText.headlineLg(
+                    color: _DeploymentColors.onSurface,
                   ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.person,
-                    size: 18,
-                    color: _DeploymentColors.onPrimary,
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -187,9 +215,10 @@ class _Header extends StatelessWidget {
 }
 
 class _ServiceMetaCard extends StatelessWidget {
-  const _ServiceMetaCard({required this.onDeploy});
+  const _ServiceMetaCard({required this.starting, required this.onStartServer});
 
-  final VoidCallback onDeploy;
+  final bool starting;
+  final VoidCallback onStartServer;
 
   Future<void> _copy(BuildContext context, String value, String message) async {
     await Clipboard.setData(ClipboardData(text: value));
@@ -286,30 +315,11 @@ class _ServiceMetaCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _ActionButton(
-                  icon: Icons.terminal,
-                  label: 'Connect',
-                  onTap:
-                      () => _copy(
-                        context,
-                        'paperstudio.onrender.com',
-                        'Endpoint copied',
-                      ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ActionButton(
-                  icon: Icons.rocket_launch,
-                  label: 'Deploy',
-                  primary: true,
-                  onTap: onDeploy,
-                ),
-              ),
-            ],
+          _ActionButton(
+            icon: Icons.play_arrow,
+            label: starting ? 'Starting...' : 'Start Server',
+            busy: starting,
+            onTap: onStartServer,
           ),
           const SizedBox(height: 14),
           Container(
@@ -492,35 +502,41 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.primary = false,
+    this.busy = false,
   });
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
-  final bool primary;
+  final VoidCallback? onTap;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
-    final background =
-        primary
-            ? _DeploymentColors.primary
-            : _DeploymentColors.surfaceContainerHigh;
-    final foreground =
-        primary ? _DeploymentColors.onPrimary : _DeploymentColors.onSurface;
+    const foreground = _DeploymentColors.onPrimary;
 
     return _PressedScale(
-      onTap: onTap,
+      onTap: busy ? null : onTap,
       child: Container(
+        width: double.infinity,
         height: 46,
         decoration: BoxDecoration(
-          color: background,
+          color: _DeploymentColors.primary,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 17, color: foreground),
+            if (busy)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: foreground,
+                ),
+              )
+            else
+              Icon(icon, size: 17, color: foreground),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
@@ -529,12 +545,10 @@ class _ActionButton extends StatelessWidget {
                 softWrap: false,
                 style: _DeploymentText.bodyMd(
                   color: foreground,
-                  weight: primary ? FontWeight.w700 : FontWeight.w500,
+                  weight: FontWeight.w700,
                 ),
               ),
             ),
-            const SizedBox(width: 6),
-            Icon(Icons.expand_more, size: 17, color: foreground),
           ],
         ),
       ),
