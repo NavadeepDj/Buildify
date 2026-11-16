@@ -515,8 +515,9 @@ class _HostedAccountPageState extends ConsumerState<HostedAccountPage> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Confirm your password.';
+                      }
                       return value == _password.text
                           ? null
                           : 'Passwords do not match.';
