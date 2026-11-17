@@ -8,6 +8,17 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    if let controller = window?.rootViewController as? FlutterViewController {
+      let channel = FlutterMethodChannel(
+        name: "buildify.ai/server", binaryMessenger: controller.binaryMessenger)
+      channel.setMethodCallHandler { call, result in
+        if call.method == "getMobileDeviceName" {
+          result(UIDevice.current.name)
+        } else {
+          result(FlutterMethodNotImplemented)
+        }
+      }
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

@@ -240,6 +240,8 @@ class EmbeddedBackendService {
 
   BackendState get state => _state;
   Stream<BackendState> get stream => _stateController.stream;
+  bool get projectsHydrated => _projectsHydrated;
+  bool _projectsHydrated = false;
 
   Future<void> hydrateProjects() async {
     try {
@@ -285,6 +287,7 @@ class EmbeddedBackendService {
               envVars: parsedEnv,
             );
           }).toList();
+      _projectsHydrated = true;
       _emit(_state.copyWith(projects: loaded));
 
       for (final p in loaded.where((p) => p.subdomain.isEmpty)) {
