@@ -1,5 +1,9 @@
 # Buildify documentation
 
+[Guided setup manual QA](testing/assistant-guided-setup-qa.md) gives Windows and
+Android testers the build/access gate, step-by-step cases and expected outcomes.
+Copy the [result sheet](testing/assistant-guided-setup-results-template.md) per host.
+
 [Assistant host inspection](assistant-host-inspection.md) documents the first
 Buildify AI foundation: fresh local measurements and read-only runtime tools.
 Track the model-first assistant roadmap in
