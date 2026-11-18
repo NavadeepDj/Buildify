@@ -2,6 +2,25 @@ import 'package:flutter/material.dart';
 
 final voiceOverlaysVisible = ValueNotifier<bool>(true);
 
+/// Bottom clearance for scrollable pages under the global voice shortcuts.
+class VoiceOverlayInset extends InheritedWidget {
+  const VoiceOverlayInset({
+    super.key,
+    required this.bottom,
+    required super.child,
+  });
+
+  final double bottom;
+
+  static double bottomOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<VoiceOverlayInset>()?.bottom ??
+      0;
+
+  @override
+  bool updateShouldNotify(VoiceOverlayInset oldWidget) =>
+      bottom != oldWidget.bottom;
+}
+
 /// The global voice shortcuts must not cover a review page or a modal footer.
 class VoiceOverlayRouteObserver extends NavigatorObserver {
   final _routes = <Route<dynamic>>[];
