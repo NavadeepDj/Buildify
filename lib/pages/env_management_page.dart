@@ -1,3 +1,5 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -215,16 +217,7 @@ class _EnvManagementPageState extends ConsumerState<EnvManagementPage> {
         _expanded ? entries : entries.take(_collapsedCount).toList();
 
     return Theme(
-      data: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: _EnvPalette.background,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-        textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: _EnvPalette.text,
-          selectionColor: _EnvPalette.selection,
-          selectionHandleColor: _EnvPalette.text,
-        ),
-      ),
+      data: AppTheme.dark,
       child: Scaffold(
         backgroundColor: _EnvPalette.background,
         body: Column(
@@ -1367,25 +1360,24 @@ const _bodyStyle = TextStyle(
 // PALETTE
 // ==========================================
 class _EnvPalette {
-  static const background = Color(0xFF131312);
+  static const background = AppPalette.bg;
   static const serviceHeader = Color(0xFF151514);
-  static const card = Color(0xFF18181B);
-  static const elevated = Color(0xFF1C1C20);
-  static const footer = Color(0xFF141416);
-  static const input = Color(0xFF121214);
-  static const border = Color(0xFF27272A);
-  static const borderStrong = Color(0xFF3F3F46);
-  static const text = Color(0xFFF4F4F5);
-  static const softText = Color(0xFFD4D4D8);
-  static const muted = Color(0xFF71717A);
-  static const primary = Color(0xFFFFFFFF);
+  static const card = AppPalette.surface;
+  static const elevated = AppPalette.surfaceAlt;
+  static const footer = AppPalette.bg;
+  static const input = AppPalette.surfaceAlt;
+  static const border = AppPalette.border;
+  static const borderStrong = AppPalette.muted;
+  static const text = AppPalette.text;
+  static const softText = AppPalette.text;
+  static const muted = AppPalette.muted;
+  static const primary = AppPalette.primary;
   static const onPrimary = Color(0xFF000000);
   static const success = Color(0xFF34D399);
   static const successFill = Color(0xFF052E22);
   static const successBorder = Color(0xFF065F46);
-  static const purpleText = Color(0xFFD8B4FE);
-  static const purpleFill = Color(0xFF2E1065);
-  static const purpleBorder = Color(0xFF6B21A8);
+  static const purpleText = AppPalette.text;
+  static const purpleFill = AppPalette.surfaceAlt;
+  static const purpleBorder = AppPalette.border;
   static const danger = Color(0xFFF87171);
-  static const selection = Color(0x553F3F46);
 }

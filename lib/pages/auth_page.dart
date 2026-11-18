@@ -1,3 +1,4 @@
+import '../theme/app_palette.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -259,7 +260,6 @@ class _AuthCard extends StatelessWidget {
                   isLogin ? 'welcome back' : 'create your account',
                   style: const TextStyle(
                     color: _AuthColors.text,
-                    fontFamily: 'monospace',
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.5,
@@ -272,7 +272,6 @@ class _AuthCard extends StatelessWidget {
                       : 'choose your verification method to activate your account.',
                   style: const TextStyle(
                     color: _AuthColors.muted,
-                    fontFamily: 'monospace',
                     fontSize: 13,
                     height: 1.5,
                   ),
@@ -293,7 +292,6 @@ class _AuthCard extends StatelessWidget {
                       errorMessage!,
                       style: const TextStyle(
                         color: _AuthColors.error,
-                        fontFamily: 'monospace',
                         fontSize: 12,
                         height: 1.4,
                       ),
@@ -308,7 +306,6 @@ class _AuthCard extends StatelessWidget {
                     'verification method:',
                     style: TextStyle(
                       color: _AuthColors.text,
-                      fontFamily: 'monospace',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -342,7 +339,6 @@ class _AuthCard extends StatelessWidget {
                         : 'A 6-digit SMS OTP code (valid for 5m) will be sent to your phone.',
                     style: const TextStyle(
                       color: _AuthColors.muted,
-                      fontFamily: 'monospace',
                       fontSize: 11,
                     ),
                   ),
@@ -413,10 +409,9 @@ class _AuthCard extends StatelessWidget {
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: countryCode,
-                            dropdownColor: const Color(0xFF20201E),
+                            dropdownColor: AppPalette.surfaceAlt,
                             style: const TextStyle(
                               color: _AuthColors.text,
-                              fontFamily: 'monospace',
                               fontSize: 13,
                             ),
                             items: const [
@@ -581,7 +576,6 @@ class _AuthCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: _AuthColors.muted,
-                      fontFamily: 'monospace',
                       fontSize: 10,
                       height: 1.4,
                     ),
@@ -630,7 +624,7 @@ class _MethodTab extends StatelessWidget {
           border: Border.all(
             color:
                 isSelected
-                    ? const Color(0xFF2DD4BF)
+                    ? AppPalette.primary
                     : _AuthColors.border.withValues(alpha: 0.5),
             width: isSelected ? 1.5 : 1,
           ),
@@ -641,14 +635,13 @@ class _MethodTab extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: isSelected ? const Color(0xFF2DD4BF) : _AuthColors.muted,
+              color: isSelected ? AppPalette.primary : _AuthColors.muted,
             ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 color: isSelected ? _AuthColors.text : _AuthColors.muted,
-                fontFamily: 'monospace',
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -688,36 +681,20 @@ class _AuthField extends StatelessWidget {
       validator: validator,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      style: const TextStyle(
-        color: _AuthColors.text,
-        fontFamily: 'monospace',
-        fontSize: 14,
-      ),
+      style: const TextStyle(color: _AuthColors.text, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon, color: _AuthColors.muted, size: 20),
         suffixIcon: suffixIcon,
-        labelStyle: const TextStyle(
-          color: _AuthColors.muted,
-          fontFamily: 'monospace',
-          fontSize: 12,
-        ),
-        hintStyle: const TextStyle(
-          color: _AuthColors.muted,
-          fontFamily: 'monospace',
-          fontSize: 13,
-        ),
+        labelStyle: const TextStyle(color: _AuthColors.muted, fontSize: 12),
+        hintStyle: const TextStyle(color: _AuthColors.muted, fontSize: 13),
         filled: true,
         fillColor: _AuthColors.field,
-        errorStyle: const TextStyle(
-          color: _AuthColors.error,
-          fontFamily: 'monospace',
-          fontSize: 10,
-        ),
+        errorStyle: const TextStyle(color: _AuthColors.error, fontSize: 10),
         border: _fieldBorder(_AuthColors.border),
         enabledBorder: _fieldBorder(_AuthColors.border),
-        focusedBorder: _fieldBorder(const Color(0xFF2DD4BF)),
+        focusedBorder: _fieldBorder(AppPalette.primary),
         errorBorder: _fieldBorder(_AuthColors.error),
         focusedErrorBorder: _fieldBorder(_AuthColors.error),
       ),
@@ -749,7 +726,6 @@ class _BrandMark extends StatelessWidget {
             '>_',
             style: TextStyle(
               color: _AuthColors.background,
-              fontFamily: 'monospace',
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -760,7 +736,6 @@ class _BrandMark extends StatelessWidget {
           'buildify',
           style: TextStyle(
             color: _AuthColors.text,
-            fontFamily: 'monospace',
             fontSize: 16,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.5,
@@ -820,12 +795,12 @@ class _MeshBackground extends StatelessWidget {
 }
 
 class _AuthColors {
-  static const background = Color(0xFF131312);
+  static const background = AppPalette.bg;
   static const card = Color(0x6620201E);
   static const field = Color(0x662A2A29);
   static const border = Color(0x1AFFFFFF);
-  static const primary = Color(0xFFFFFFFF);
-  static const text = Color(0xFFE5E2E0);
+  static const primary = AppPalette.primary;
+  static const text = AppPalette.text;
   static const muted = Color(0x99C4C7C8);
   static const error = Color(0xFFFFB4AB);
 }

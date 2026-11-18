@@ -73,6 +73,7 @@ void main() {
           modelPath: model,
           port: port,
           apiKey: key,
+          contextTokens: 512,
         );
         expect(start.ok, true, reason: start.message);
         var ready = false;

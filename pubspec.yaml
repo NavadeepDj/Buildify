@@ -79,6 +79,7 @@ flutter:
   assets:
     - assets/icon.png
     - assets/models/catalog.json
+    - assets/fonts/
     - assets/github.svg
     - assets/google_fonts/
 

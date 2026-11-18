@@ -1,3 +1,4 @@
+import '../theme/app_palette.dart';
 import 'dart:async';
 import 'dart:ui';
 
@@ -111,11 +112,17 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
   Future<void> _verifyPhoneOtp() async {
     final otp = _otpController.text.trim();
     if (otp.length != 6) {
-      setState(() => _errorMessage = 'Please enter a 6-digit verification code.');
+      setState(
+        () => _errorMessage = 'Please enter a 6-digit verification code.',
+      );
       return;
     }
     if (_challenge == null) {
-      setState(() => _errorMessage = 'Challenge session missing. Please request a new code.');
+      setState(
+        () =>
+            _errorMessage =
+                'Challenge session missing. Please request a new code.',
+      );
       return;
     }
 
@@ -180,17 +187,20 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
     }
     Future.delayed(const Duration(milliseconds: 1400), () {
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/projects', (route) => false);
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil('/projects', (route) => false);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEmail = _challenge?.channel == VerificationChannel.email ||
+    final isEmail =
+        _challenge?.channel == VerificationChannel.email ||
         widget.initialToken != null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF131312),
+      backgroundColor: AppPalette.bg,
       body: Stack(
         children: [
           _VerificationMesh(animation: _meshController),
@@ -211,9 +221,12 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: const Color(0x1AFFFFFF)),
                         ),
-                        child: _isSuccess
-                            ? _buildSuccessView()
-                            : (isEmail ? _buildEmailView() : _buildPhoneView()),
+                        child:
+                            _isSuccess
+                                ? _buildSuccessView()
+                                : (isEmail
+                                    ? _buildEmailView()
+                                    : _buildPhoneView()),
                       ),
                     ),
                   ),
@@ -234,13 +247,13 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           width: 56,
           height: 56,
           decoration: BoxDecoration(
-            color: const Color(0xFF2DD4BF).withValues(alpha: 0.15),
+            color: AppPalette.primary.withValues(alpha: 0.15),
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF2DD4BF), width: 1.5),
+            border: Border.all(color: AppPalette.primary, width: 1.5),
           ),
           child: const Icon(
             Icons.check_circle_outline,
-            color: Color(0xFF2DD4BF),
+            color: AppPalette.primary,
             size: 32,
           ),
         ),
@@ -248,19 +261,18 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
         const Text(
           'verification complete',
           style: TextStyle(
-            color: Color(0xFFE5E2E0),
-            fontFamily: 'monospace',
+            color: AppPalette.text,
             fontSize: 22,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 10),
         Text(
-          _infoMessage ?? 'your account is verified. Redirecting to workspace...',
+          _infoMessage ??
+              'your account is verified. Redirecting to workspace...',
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: Color(0x99C4C7C8),
-            fontFamily: 'monospace',
             fontSize: 13,
             height: 1.5,
           ),
@@ -270,13 +282,13 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           width: double.infinity,
           height: 44,
           child: FilledButton(
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
-              '/projects',
-              (route) => false,
-            ),
+            onPressed:
+                () => Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/projects', (route) => false),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFFFFFF),
-              foregroundColor: const Color(0xFF131312),
+              backgroundColor: AppPalette.primary,
+              foregroundColor: AppPalette.bg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -305,7 +317,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
               ),
               child: const Icon(
                 Icons.mark_email_unread_outlined,
-                color: Color(0xFF2DD4BF),
+                color: AppPalette.primary,
                 size: 24,
               ),
             ),
@@ -314,8 +326,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
               child: Text(
                 'verify your email',
                 style: TextStyle(
-                  color: Color(0xFFE5E2E0),
-                  fontFamily: 'monospace',
+                  color: AppPalette.text,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),
@@ -328,7 +339,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           'We sent a secure verification link to $masked. Please check your inbox and click the link to activate your Buildify workspace.',
           style: const TextStyle(
             color: Color(0x99C4C7C8),
-            fontFamily: 'monospace',
             fontSize: 13,
             height: 1.5,
           ),
@@ -336,14 +346,11 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
         const SizedBox(height: 10),
         const Text(
           'Note: Links expire after 30 minutes. The email must be verified on the server before access is granted.',
-          style: TextStyle(
-            color: Color(0x80C4C7C8),
-            fontFamily: 'monospace',
-            fontSize: 11,
-          ),
+          style: TextStyle(color: Color(0x80C4C7C8), fontSize: 11),
         ),
         const SizedBox(height: 20),
-        if (_errorMessage != null) _buildAlertBox(_errorMessage!, isError: true),
+        if (_errorMessage != null)
+          _buildAlertBox(_errorMessage!, isError: true),
         if (_infoMessage != null) _buildAlertBox(_infoMessage!, isError: false),
         const SizedBox(height: 12),
         const Divider(color: Color(0x1AFFFFFF)),
@@ -351,8 +358,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
         const Text(
           'or paste verification token manually:',
           style: TextStyle(
-            color: Color(0xFFE5E2E0),
-            fontFamily: 'monospace',
+            color: AppPalette.text,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -360,11 +366,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
         const SizedBox(height: 8),
         TextFormField(
           controller: _manualTokenController,
-          style: const TextStyle(
-            color: Color(0xFFE5E2E0),
-            fontFamily: 'monospace',
-            fontSize: 13,
-          ),
+          style: const TextStyle(color: AppPalette.text, fontSize: 13),
           decoration: _inputDecoration(
             hint: 'paste token here',
             icon: Icons.vpn_key_outlined,
@@ -375,20 +377,22 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           width: double.infinity,
           height: 44,
           child: FilledButton(
-            onPressed: _isLoading
-                ? null
-                : () => _verifyEmailToken(_manualTokenController.text),
+            onPressed:
+                _isLoading
+                    ? null
+                    : () => _verifyEmailToken(_manualTokenController.text),
             style: _primaryButtonStyle(),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF131312),
-                    ),
-                  )
-                : const Text('verify token'),
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppPalette.bg,
+                      ),
+                    )
+                    : const Text('verify token'),
           ),
         ),
         const SizedBox(height: 16),
@@ -402,14 +406,14 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
                 _cooldownRemaining > 0
                     ? 'resend in ${_cooldownRemaining}s'
                     : 'resend email',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pushReplacementNamed('/'),
               child: const Text(
                 'back to login',
-                style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                style: TextStyle(fontSize: 12),
               ),
             ),
           ],
@@ -435,7 +439,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
               ),
               child: const Icon(
                 Icons.sms_outlined,
-                color: Color(0xFF2DD4BF),
+                color: AppPalette.primary,
                 size: 24,
               ),
             ),
@@ -444,8 +448,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
               child: Text(
                 'enter otp code',
                 style: TextStyle(
-                  color: Color(0xFFE5E2E0),
-                  fontFamily: 'monospace',
+                  color: AppPalette.text,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),
@@ -458,7 +461,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           'Enter the 6-digit verification code sent via SMS to $masked.',
           style: const TextStyle(
             color: Color(0x99C4C7C8),
-            fontFamily: 'monospace',
             fontSize: 13,
             height: 1.5,
           ),
@@ -466,14 +468,11 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
         const SizedBox(height: 6),
         const Text(
           'Code expires in 5 minutes. Codes are single-use.',
-          style: TextStyle(
-            color: Color(0x80C4C7C8),
-            fontFamily: 'monospace',
-            fontSize: 11,
-          ),
+          style: TextStyle(color: Color(0x80C4C7C8), fontSize: 11),
         ),
         const SizedBox(height: 20),
-        if (_errorMessage != null) _buildAlertBox(_errorMessage!, isError: true),
+        if (_errorMessage != null)
+          _buildAlertBox(_errorMessage!, isError: true),
         if (_infoMessage != null) _buildAlertBox(_infoMessage!, isError: false),
         const SizedBox(height: 12),
         TextFormField(
@@ -482,8 +481,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           maxLength: 6,
           textAlign: TextAlign.center,
           style: const TextStyle(
-            color: Color(0xFFE5E2E0),
-            fontFamily: 'monospace',
+            color: AppPalette.text,
             fontSize: 24,
             letterSpacing: 10,
             fontWeight: FontWeight.w700,
@@ -503,7 +501,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF2DD4BF)),
+              borderSide: const BorderSide(color: AppPalette.primary),
             ),
           ),
           onFieldSubmitted: (_) => _verifyPhoneOtp(),
@@ -515,16 +513,17 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           child: FilledButton(
             onPressed: _isLoading ? null : _verifyPhoneOtp,
             style: _primaryButtonStyle(),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF131312),
-                    ),
-                  )
-                : const Text('verify code'),
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppPalette.bg,
+                      ),
+                    )
+                    : const Text('verify code'),
           ),
         ),
         const SizedBox(height: 16),
@@ -538,14 +537,14 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
                 _cooldownRemaining > 0
                     ? 'resend in ${_cooldownRemaining}s'
                     : 'resend code',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pushReplacementNamed('/'),
               child: const Text(
                 'back to login',
-                style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                style: TextStyle(fontSize: 12),
               ),
             ),
           ],
@@ -568,17 +567,15 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
       ),
       child: Text(
         message,
-        style: TextStyle(
-          color: color,
-          fontFamily: 'monospace',
-          fontSize: 12,
-          height: 1.4,
-        ),
+        style: TextStyle(color: color, fontSize: 12, height: 1.4),
       ),
     );
   }
 
-  InputDecoration _inputDecoration({required String hint, required IconData icon}) {
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+  }) {
     return InputDecoration(
       hintText: hint,
       prefixIcon: Icon(icon, color: const Color(0x99C4C7C8), size: 20),
@@ -591,19 +588,17 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFF2DD4BF)),
+        borderSide: const BorderSide(color: AppPalette.primary),
       ),
     );
   }
 
   ButtonStyle _primaryButtonStyle() {
     return FilledButton.styleFrom(
-      backgroundColor: const Color(0xFFFFFFFF),
-      foregroundColor: const Color(0xFF131312),
+      backgroundColor: AppPalette.primary,
+      foregroundColor: AppPalette.bg,
       disabledBackgroundColor: const Color(0x80FFFFFF),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 }
@@ -616,14 +611,15 @@ class _VerificationMesh extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: animation,
-      builder: (context, child) =>
-          Transform.scale(scale: 1 + animation.value * 0.08, child: child),
+      builder:
+          (context, child) =>
+              Transform.scale(scale: 1 + animation.value * 0.08, child: child),
       child: ImageFiltered(
         imageFilter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Container(color: const Color(0xFF131312)),
+            Container(color: AppPalette.bg),
             Align(
               alignment: Alignment.topLeft,
               child: FractionallySizedBox(
@@ -634,7 +630,7 @@ class _VerificationMesh extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFF2DD4BF).withValues(alpha: 0.12),
+                        AppPalette.primary.withValues(alpha: 0.12),
                         Colors.transparent,
                       ],
                     ),

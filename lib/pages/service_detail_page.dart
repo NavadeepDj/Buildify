@@ -1,3 +1,5 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -257,9 +259,7 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
                             ),
                           ),
                           focusedBorder: const OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: _DetailPalette.error,
-                            ),
+                            borderSide: BorderSide(color: _DetailPalette.error),
                           ),
                         ),
                       ),
@@ -293,9 +293,9 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _deleting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete model: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete model: $error')));
     }
   }
 
@@ -339,10 +339,7 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
         _logsFullscreen ? MediaQuery.sizeOf(context).height * 0.75 : 400.0;
 
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _DetailPalette.background,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: Scaffold(
         backgroundColor: _DetailPalette.background,
         body: DecoratedBox(
@@ -623,21 +620,21 @@ class _ServiceDetailPageState extends ConsumerState<ServiceDetailPage> {
 }
 
 class _DetailPalette {
-  static const background = Color(0xFF131312);
-  static const primary = Color(0xFFFFFFFF);
-  static const onSurface = Color(0xFFE5E2E0);
-  static const onSurfaceVariant = Color(0xFFC4C7C8);
+  static const background = AppPalette.bg;
+  static const primary = AppPalette.primary;
+  static const onSurface = AppPalette.text;
+  static const onSurfaceVariant = AppPalette.text;
   static const onPrimary = Color(0xFF2F3131);
-  static const outline = Color(0xFF8E9192);
-  static const outlineVariant = Color(0xFF444748);
-  static const surfaceContainer = Color(0xFF20201E);
-  static const surfaceContainerLow = Color(0xFF1C1C1A);
-  static const surfaceContainerLowest = Color(0xFF0E0E0D);
-  static const error = Color(0xFFFFB4AB);
+  static const outline = AppPalette.muted;
+  static const outlineVariant = AppPalette.border;
+  static const surfaceContainer = AppPalette.surfaceAlt;
+  static const surfaceContainerLow = AppPalette.surface;
+  static const surfaceContainerLowest = AppPalette.bg;
+  static const successGreen = AppPalette.text;
+  static const error = AppPalette.error;
   static const errorRed = Color(0xFFAF1D27);
-  static const successGreen = Color(0xFF10B981);
   static const statusSuspended = Color(0xFF897671);
-  static const terminalBg = Color(0xFF0E0E0D);
+  static const terminalBg = AppPalette.bg;
 }
 
 class _LogLine {
@@ -771,17 +768,17 @@ class _DetailTopBar extends StatelessWidget {
             icon:
                 deleting
                     ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: _DetailPalette.onSurfaceVariant,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.delete_forever_outlined,
-                        color: _DetailPalette.onSurface,
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _DetailPalette.onSurfaceVariant,
                       ),
+                    )
+                    : const Icon(
+                      Icons.delete_forever_outlined,
+                      color: _DetailPalette.onSurface,
+                    ),
           ),
         ],
       ),
@@ -803,9 +800,7 @@ class _DetailDialogAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground =
-        destructive
-            ? _DetailPalette.error
-            : _DetailPalette.onSurfaceVariant;
+        destructive ? _DetailPalette.error : _DetailPalette.onSurfaceVariant;
 
     return TextButton(
       onPressed: onTap,

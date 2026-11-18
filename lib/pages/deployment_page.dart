@@ -1,3 +1,6 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,14 +70,7 @@ class _DeploymentPageState extends ConsumerState<DeploymentPage> {
     final items = _filteredItems;
 
     return Theme(
-      data: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: _DeploymentColors.surface,
-        textSelectionTheme: TextSelectionThemeData(
-          cursorColor: _DeploymentColors.primary,
-          selectionColor: _DeploymentColors.primary.withValues(alpha: 0.2),
-        ),
-      ),
+      data: AppTheme.dark,
       child: Scaffold(
         backgroundColor: _DeploymentColors.surface,
         body: Stack(
@@ -1170,20 +1166,20 @@ const List<_DeployItem> _items = [
 ];
 
 class _DeploymentColors {
-  static const Color surface = Color(0xFF131312);
-  static const Color onSurface = Color(0xFFE5E2E0);
-  static const Color onSurfaceVariant = Color(0xFFC4C7C8);
-  static const Color surfaceContainerLowest = Color(0xFF0E0E0D);
-  static const Color surfaceContainerLow = Color(0xFF1C1C1A);
-  static const Color surfaceContainerHigh = Color(0xFF2A2A29);
+  static const Color surface = AppPalette.bg;
+  static const Color onSurface = AppPalette.text;
+  static const Color onSurfaceVariant = AppPalette.text;
+  static const Color surfaceContainerLowest = AppPalette.bg;
+  static const Color surfaceContainerLow = AppPalette.surface;
+  static const Color surfaceContainerHigh = AppPalette.surfaceAlt;
   static const Color surfaceVariant = Color(0xFF353533);
-  static const Color outline = Color(0xFF8E9192);
-  static const Color primary = Color(0xFFFFFFFF);
+  static const Color outline = AppPalette.muted;
+  static const Color primary = AppPalette.primary;
   static const Color onPrimary = Color(0xFF2F3131);
   static const Color secondary = Color(0xFFC8C6C3);
   static const Color secondaryContainer = Color(0xFF474744);
   static const Color onSecondaryContainer = Color(0xFFB7B5B1);
-  static const Color successGreen = Color(0xFF10B981);
+  static const Color successGreen = AppPalette.text;
   static const Color danger = Color(0xFFE5484D);
 }
 

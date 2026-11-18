@@ -1,3 +1,5 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'dart:async';
 import 'dart:ui';
 
@@ -70,10 +72,9 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
         tooltipPosition: TooltipPosition.top,
       ),
     ];
-    ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
-          steps,
-          tourKey: 'buildify_tour_ai_models',
-        );
+    ref
+        .read(guidedTourNotifierProvider.notifier)
+        .checkAndAutoStartTour(steps, tourKey: 'buildify_tour_ai_models');
   }
 
   @override
@@ -126,9 +127,9 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
       }
     }
   }
@@ -140,15 +141,16 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
       if (_sizeFilter == 'small' && !_isSmallModel(m)) return false;
       if (_sizeFilter == 'medium' && !_isMediumModel(m)) return false;
       if (q.isEmpty) return true;
-      final haystack = [
-        m.name,
-        m.description,
-        m.sizeLabel,
-        m.speed,
-        m.quality,
-        meta?.architecture ?? '',
-        meta?.quantization ?? '',
-      ].join(' ').toLowerCase();
+      final haystack =
+          [
+            m.name,
+            m.description,
+            m.sizeLabel,
+            m.speed,
+            m.quality,
+            meta?.architecture ?? '',
+            meta?.quantization ?? '',
+          ].join(' ').toLowerCase();
       return haystack.contains(q);
     }).toList();
   }
@@ -164,13 +166,11 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(aiServerProvider);
     final models = _filteredModels(state.models);
-    final horizontalPadding = MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
+    final horizontalPadding =
+        MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
 
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _SelectPalette.background,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: GuidedTourOverlay(
         child: Scaffold(
           backgroundColor: _SelectPalette.background,
@@ -205,19 +205,22 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
                           alignment: Alignment.centerLeft,
                           child: IconButton(
                             onPressed: () => Navigator.maybePop(context),
-                            icon: const Icon(Icons.arrow_back,
-                                color: _SelectPalette.primary),
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: _SelectPalette.primary,
+                            ),
                             tooltip: 'back',
                           ),
                         ),
                         _HeaderSection(),
                         const SizedBox(height: 24),
                         _AssistantSetupBanner(
-                          onOpenAssistant: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const AiServerShell(),
-                            ),
-                          ),
+                          onOpenAssistant:
+                              () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const AiServerShell(),
+                                ),
+                              ),
                         ),
                         const SizedBox(height: 24),
                         _SearchAndFilters(
@@ -233,22 +236,20 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
                           onClone: _openCloneModal,
                         ),
                         const SizedBox(height: 40),
-                        ...models.asMap().entries.map(
-                          (entry) {
-                            final idx = entry.key;
-                            final m = entry.value;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              child: _ModelCard(
-                                key: idx == 0 ? _firstModelCardKey : null,
-                                model: m,
-                                download: state.downloads[m.id],
-                                selected: _selectedId == m.id,
-                                onContinue: () => unawaited(_onContinue(m.id)),
-                              ),
-                            );
-                          },
-                        ),
+                        ...models.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final m = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            child: _ModelCard(
+                              key: idx == 0 ? _firstModelCardKey : null,
+                              model: m,
+                              download: state.downloads[m.id],
+                              selected: _selectedId == m.id,
+                              onContinue: () => unawaited(_onContinue(m.id)),
+                            ),
+                          );
+                        }),
                         if (models.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 32),
@@ -274,15 +275,15 @@ class _AiModelSelectPageState extends ConsumerState<AiModelSelectPage> {
 }
 
 class _SelectPalette {
-  static const background = Color(0xFF131312);
-  static const primary = Color(0xFFFFFFFF);
-  static const onSurface = Color(0xFFE5E2E0);
-  static const onSurfaceVariant = Color(0xFFC4C7C8);
-  static const textDim = Color(0xFF8E9192);
+  static const background = AppPalette.bg;
+  static const primary = AppPalette.primary;
+  static const onSurface = AppPalette.text;
+  static const onSurfaceVariant = AppPalette.text;
+  static const textDim = AppPalette.muted;
   static const surfaceCard = Color(0x6620201F);
   static const statusSuccess = Color(0xFF003924);
   static const statusWarning = Color(0xFF897671);
-  static const secondary = Color(0xFFC3C0FF);
+  static const secondary = AppPalette.text;
   static const onPrimaryFixed = Color(0xFF1A1C1C);
 }
 
@@ -399,7 +400,8 @@ class _DecorOrb extends StatefulWidget {
   State<_DecorOrb> createState() => _DecorOrbState();
 }
 
-class _DecorOrbState extends State<_DecorOrb> with SingleTickerProviderStateMixin {
+class _DecorOrbState extends State<_DecorOrb>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
@@ -501,7 +503,10 @@ class _SearchAndFilters extends StatelessWidget {
         final stacked = constraints.maxWidth < 600;
         final search = TextField(
           controller: controller,
-          style: GoogleFonts.spaceMono(fontSize: 14, color: _SelectPalette.onSurface),
+          style: GoogleFonts.spaceMono(
+            fontSize: 14,
+            color: _SelectPalette.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: 'filter models by architecture or size...',
             hintStyle: GoogleFonts.spaceMono(
@@ -511,14 +516,21 @@ class _SearchAndFilters extends StatelessWidget {
             prefixIcon: const Icon(Icons.search, color: _SelectPalette.textDim),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.05),
-            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 16,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.5),
+              ),
             ),
           ),
         );
@@ -533,7 +545,8 @@ class _SearchAndFilters extends StatelessWidget {
             _SizeFilterChip(
               label: 'medium',
               selected: sizeFilter == 'medium',
-              onTap: () => onSizeFilter(sizeFilter == 'medium' ? null : 'medium'),
+              onTap:
+                  () => onSizeFilter(sizeFilter == 'medium' ? null : 'medium'),
             ),
           ],
         );
@@ -579,9 +592,10 @@ class _SizeFilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected
-                  ? Colors.white.withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: 0.1),
+              color:
+                  selected
+                      ? Colors.white.withValues(alpha: 0.4)
+                      : Colors.white.withValues(alpha: 0.1),
             ),
             color: selected ? Colors.white.withValues(alpha: 0.08) : null,
           ),
@@ -648,7 +662,9 @@ class _ImportSection extends StatelessWidget {
                 onTap: onClone,
               );
               if (stacked) {
-                return Column(children: [upload, const SizedBox(height: 16), clone]);
+                return Column(
+                  children: [upload, const SizedBox(height: 16), clone],
+                );
               }
               return Row(
                 children: [
@@ -763,51 +779,56 @@ class _ModelCardState extends State<_ModelCard> {
     final download = widget.download;
     final downloaded = download?.status == ModelDownloadStatus.downloaded;
     final downloading = download?.status == ModelDownloadStatus.downloading;
-    final bg = _pointer != null
-        ? BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(
-                (_pointer!.dx / 300).clamp(-1.0, 1.0),
-                (_pointer!.dy / 200).clamp(-1.0, 1.0),
+    final bg =
+        _pointer != null
+            ? BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(
+                  (_pointer!.dx / 300).clamp(-1.0, 1.0),
+                  (_pointer!.dy / 200).clamp(-1.0, 1.0),
+                ),
+                radius: 0.9,
+                colors: [
+                  Colors.white.withValues(alpha: 0.06),
+                  _SelectPalette.surfaceCard,
+                ],
               ),
-              radius: 0.9,
-              colors: [
-                Colors.white.withValues(alpha: 0.06),
-                _SelectPalette.surfaceCard,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.selected
-                  ? Colors.white.withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: 0.05),
-            ),
-            boxShadow: widget.selected
-                ? [
-                    BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      blurRadius: 20,
-                    ),
-                  ]
-                : null,
-          )
-        : BoxDecoration(
-            color: _SelectPalette.surfaceCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.selected
-                  ? Colors.white.withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: 0.05),
-            ),
-            boxShadow: widget.selected
-                ? [
-                    BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      blurRadius: 20,
-                    ),
-                  ]
-                : null,
-          );
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color:
+                    widget.selected
+                        ? Colors.white.withValues(alpha: 0.4)
+                        : Colors.white.withValues(alpha: 0.05),
+              ),
+              boxShadow:
+                  widget.selected
+                      ? [
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          blurRadius: 20,
+                        ),
+                      ]
+                      : null,
+            )
+            : BoxDecoration(
+              color: _SelectPalette.surfaceCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color:
+                    widget.selected
+                        ? Colors.white.withValues(alpha: 0.4)
+                        : Colors.white.withValues(alpha: 0.05),
+              ),
+              boxShadow:
+                  widget.selected
+                      ? [
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          blurRadius: 20,
+                        ),
+                      ]
+                      : null,
+            );
 
     return MouseRegion(
       onEnter: (_) {},
@@ -841,17 +862,25 @@ class _ModelCardState extends State<_ModelCard> {
                                     height: 48,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Colors.white.withValues(alpha: 0.05),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.1),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.1,
+                                        ),
                                       ),
                                     ),
-                                    child: Icon(meta.icon, color: _SelectPalette.primary),
+                                    child: Icon(
+                                      meta.icon,
+                                      color: _SelectPalette.primary,
+                                    ),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           displayName,
@@ -892,7 +921,9 @@ class _ModelCardState extends State<_ModelCard> {
                             child: LinearProgressIndicator(
                               value: download!.progress,
                               minHeight: 8,
-                              backgroundColor: Colors.white.withValues(alpha: 0.08),
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.08,
+                              ),
                               color: _SelectPalette.primary,
                             ),
                           ),
@@ -909,11 +940,16 @@ class _ModelCardState extends State<_ModelCard> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.05),
                       border: Border(
-                        top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+                        top: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.05),
+                        ),
                       ),
                     ),
                     child: Column(
@@ -921,15 +957,19 @@ class _ModelCardState extends State<_ModelCard> {
                       children: [
                         Row(
                           children: [
-                            Icon(meta.footerIcon, size: 18, color: _SelectPalette.textDim),
+                            Icon(
+                              meta.footerIcon,
+                              size: 18,
+                              color: _SelectPalette.textDim,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 downloaded
                                     ? 'model ready on device'
                                     : downloading
-                                        ? 'fetching weights…'
-                                        : meta.footerText,
+                                    ? 'fetching weights…'
+                                    : meta.footerText,
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -1015,9 +1055,13 @@ class _MetadataRow extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            Expanded(child: _MetaCell(label: 'parameters', value: meta.parameters)),
+            Expanded(
+              child: _MetaCell(label: 'parameters', value: meta.parameters),
+            ),
             Container(width: 1, color: Colors.white.withValues(alpha: 0.05)),
-            Expanded(child: _MetaCell(label: 'quantization', value: meta.quantization)),
+            Expanded(
+              child: _MetaCell(label: 'quantization', value: meta.quantization),
+            ),
             Container(width: 1, color: Colors.white.withValues(alpha: 0.05)),
             Expanded(child: _MetaCell(label: 'vram req', value: meta.vramReq)),
           ],
@@ -1191,7 +1235,8 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
       if (!mounted) return;
       setState(() {
         _files = files;
-        _filesError = files.isEmpty ? 'No .gguf files found in this repo' : null;
+        _filesError =
+            files.isEmpty ? 'No .gguf files found in this repo' : null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -1205,7 +1250,9 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
     final repoId = _pickedResult!.id;
     final displayName =
         '${_pickedResult!.displayName} ${file.quantLabel}'.trim();
-    ref.read(aiServerProvider.notifier).downloadFromUrl(
+    ref
+        .read(aiServerProvider.notifier)
+        .downloadFromUrl(
           downloadUrl: file.downloadUrl(repoId),
           displayName: displayName,
           fileName: file.rfilename,
@@ -1213,9 +1260,9 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
           description: 'From HuggingFace: $repoId',
         );
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Downloading $displayName…')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Downloading $displayName…')));
   }
 
   Future<void> _processUrl() async {
@@ -1238,15 +1285,17 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
             .replaceAll('_', ' ')
             .replaceAll('-', ' ');
         if (!mounted) return;
-        ref.read(aiServerProvider.notifier).downloadFromUrl(
+        ref
+            .read(aiServerProvider.notifier)
+            .downloadFromUrl(
               downloadUrl: url,
               displayName: displayName,
               fileName: fileName,
             );
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Downloading $displayName…')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Downloading $displayName…')));
         return;
       }
 
@@ -1261,16 +1310,18 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
               .replaceAll('_', ' ')
               .replaceAll('-', ' ');
           if (!mounted) return;
-          ref.read(aiServerProvider.notifier).downloadFromUrl(
+          ref
+              .read(aiServerProvider.notifier)
+              .downloadFromUrl(
                 downloadUrl: url,
                 displayName: displayName,
                 fileName: fileName,
                 description: 'From HuggingFace: ${parsed.repoId}',
               );
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Downloading $displayName…')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Downloading $displayName…')));
           return;
         }
 
@@ -1278,7 +1329,9 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
         final files = await HfService.getModelFiles(parsed.repoId);
         if (!mounted) return;
         if (files.isEmpty) {
-          setState(() => _urlError = 'No .gguf files found in ${parsed.repoId}');
+          setState(
+            () => _urlError = 'No .gguf files found in ${parsed.repoId}',
+          );
         } else {
           setState(() {
             _urlFiles = files;
@@ -1288,8 +1341,11 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
         return;
       }
 
-      setState(() =>
-          _urlError = 'Unrecognised URL. Paste a HuggingFace model page or a direct .gguf link.');
+      setState(
+        () =>
+            _urlError =
+                'Unrecognised URL. Paste a HuggingFace model page or a direct .gguf link.',
+      );
     } catch (e) {
       if (mounted) setState(() => _urlError = 'Error: $e');
     } finally {
@@ -1299,9 +1355,10 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
 
   void _downloadUrlFile(HfModelFile file) {
     final repoId = _urlRepoId!;
-    final displayName =
-        '${repoId.split('/').last} ${file.quantLabel}'.trim();
-    ref.read(aiServerProvider.notifier).downloadFromUrl(
+    final displayName = '${repoId.split('/').last} ${file.quantLabel}'.trim();
+    ref
+        .read(aiServerProvider.notifier)
+        .downloadFromUrl(
           downloadUrl: file.downloadUrl(repoId),
           displayName: displayName,
           fileName: file.rfilename,
@@ -1309,9 +1366,9 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
           description: 'From HuggingFace: $repoId',
         );
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Downloading $displayName…')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Downloading $displayName…')));
   }
 
   @override
@@ -1330,23 +1387,28 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _ModalHeader(tab: _tab, onTabChange: (t) => setState(() {
-              _tab = t;
-              _urlFiles = [];
-              _urlRepoId = null;
-              _urlError = null;
-              _pickedResult = null;
-              _files = [];
-              _results = [];
-              _searchError = null;
-            })),
+            _ModalHeader(
+              tab: _tab,
+              onTabChange:
+                  (t) => setState(() {
+                    _tab = t;
+                    _urlFiles = [];
+                    _urlRepoId = null;
+                    _urlError = null;
+                    _pickedResult = null;
+                    _files = [];
+                    _results = [];
+                    _searchError = null;
+                  }),
+            ),
             const Divider(height: 1, color: Color(0x1AFFFFFF)),
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: _tab == _ImportTab.search
-                    ? _buildSearchBody()
-                    : _buildUrlBody(),
+                child:
+                    _tab == _ImportTab.search
+                        ? _buildSearchBody()
+                        : _buildUrlBody(),
               ),
             ),
           ],
@@ -1359,21 +1421,23 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(children: [
-          Expanded(
-            child: _ModalTextField(
-              controller: _searchCtrl,
-              hint: 'search HuggingFace (e.g. "mistral 7b")…',
-              onSubmitted: (_) => _runSearch(),
+        Row(
+          children: [
+            Expanded(
+              child: _ModalTextField(
+                controller: _searchCtrl,
+                hint: 'search HuggingFace (e.g. "mistral 7b")…',
+                onSubmitted: (_) => _runSearch(),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          _ModalActionButton(
-            label: 'SEARCH',
-            loading: _isSearching,
-            onPressed: _runSearch,
-          ),
-        ]),
+            const SizedBox(width: 8),
+            _ModalActionButton(
+              label: 'SEARCH',
+              loading: _isSearching,
+              onPressed: _runSearch,
+            ),
+          ],
+        ),
         if (_searchError != null) ...[
           const SizedBox(height: 12),
           _ErrorText(_searchError!),
@@ -1382,11 +1446,12 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
           const SizedBox(height: 16),
           _BackRow(
             label: _pickedResult!.displayName,
-            onBack: () => setState(() {
-              _pickedResult = null;
-              _files = [];
-              _filesError = null;
-            }),
+            onBack:
+                () => setState(() {
+                  _pickedResult = null;
+                  _files = [];
+                  _filesError = null;
+                }),
           ),
           const SizedBox(height: 12),
           if (_isLoadingFiles)
@@ -1394,16 +1459,14 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
           else if (_filesError != null)
             _ErrorText(_filesError!)
           else
-            ..._files.map((f) => _FileRow(
-                  file: f,
-                  onDownload: () => _downloadFile(f),
-                )),
+            ..._files.map(
+              (f) => _FileRow(file: f, onDownload: () => _downloadFile(f)),
+            ),
         ] else if (_results.isNotEmpty) ...[
           const SizedBox(height: 16),
-          ..._results.map((r) => _ResultRow(
-                result: r,
-                onTap: () => _pickResult(r),
-              )),
+          ..._results.map(
+            (r) => _ResultRow(result: r, onTap: () => _pickResult(r)),
+          ),
         ],
       ],
     );
@@ -1434,15 +1497,15 @@ class _ImportModelModalState extends ConsumerState<_ImportModelModal> {
           Text(
             'choose quantization',
             style: GoogleFonts.spaceMono(
-                fontSize: 10,
-                letterSpacing: 1.6,
-                color: _SelectPalette.textDim),
+              fontSize: 10,
+              letterSpacing: 1.6,
+              color: _SelectPalette.textDim,
+            ),
           ),
           const SizedBox(height: 8),
-          ..._urlFiles.map((f) => _FileRow(
-                file: f,
-                onDownload: () => _downloadUrlFile(f),
-              )),
+          ..._urlFiles.map(
+            (f) => _FileRow(file: f, onDownload: () => _downloadUrlFile(f)),
+          ),
         ],
       ],
     );
@@ -1463,38 +1526,46 @@ class _ModalHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Expanded(
-              child: Text(
-                'import model',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: _SelectPalette.primary,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'import model',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: _SelectPalette.primary,
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close, color: _SelectPalette.textDim, size: 20),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ]),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(
+                  Icons.close,
+                  color: _SelectPalette.textDim,
+                  size: 20,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-          Row(children: [
-            _TabChip(
-              label: 'hugging face search',
-              selected: tab == _ImportTab.search,
-              onTap: () => onTabChange(_ImportTab.search),
-            ),
-            const SizedBox(width: 8),
-            _TabChip(
-              label: 'paste url',
-              selected: tab == _ImportTab.url,
-              onTap: () => onTabChange(_ImportTab.url),
-            ),
-          ]),
+          Row(
+            children: [
+              _TabChip(
+                label: 'hugging face search',
+                selected: tab == _ImportTab.search,
+                onTap: () => onTabChange(_ImportTab.search),
+              ),
+              const SizedBox(width: 8),
+              _TabChip(
+                label: 'paste url',
+                selected: tab == _ImportTab.url,
+                onTap: () => onTabChange(_ImportTab.url),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1502,7 +1573,11 @@ class _ModalHeader extends StatelessWidget {
 }
 
 class _TabChip extends StatelessWidget {
-  const _TabChip({required this.label, required this.selected, required this.onTap});
+  const _TabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -1514,14 +1589,16 @@ class _TabChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected
-              ? Colors.white.withValues(alpha: 0.12)
-              : Colors.transparent,
+          color:
+              selected
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected
-                ? Colors.white.withValues(alpha: 0.3)
-                : Colors.white.withValues(alpha: 0.08),
+            color:
+                selected
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : Colors.white.withValues(alpha: 0.08),
           ),
         ),
         child: Text(
@@ -1539,8 +1616,11 @@ class _TabChip extends StatelessWidget {
 }
 
 class _ModalTextField extends StatelessWidget {
-  const _ModalTextField(
-      {required this.controller, required this.hint, this.onSubmitted});
+  const _ModalTextField({
+    required this.controller,
+    required this.hint,
+    this.onSubmitted,
+  });
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String>? onSubmitted;
@@ -1551,23 +1631,30 @@ class _ModalTextField extends StatelessWidget {
       controller: controller,
       onSubmitted: onSubmitted,
       style: GoogleFonts.spaceMono(
-          fontSize: 13, color: _SelectPalette.onSurface),
+        fontSize: 13,
+        color: _SelectPalette.onSurface,
+      ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle:
-            GoogleFonts.spaceMono(fontSize: 13, color: _SelectPalette.textDim),
+        hintStyle: GoogleFonts.spaceMono(
+          fontSize: 13,
+          color: _SelectPalette.textDim,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide:
-              const BorderSide(color: _SelectPalette.primary, width: 1.5),
+          borderSide: const BorderSide(
+            color: _SelectPalette.primary,
+            width: 1.5,
+          ),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         isDense: true,
       ),
     );
@@ -1588,39 +1675,39 @@ class _ModalActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = loading
-        ? const SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(
-                strokeWidth: 2, color: _SelectPalette.onPrimaryFixed),
-          )
-        : Text(
-            label,
-            style: GoogleFonts.spaceMono(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.6,
-              color: _SelectPalette.onPrimaryFixed,
-            ),
-          );
+    final child =
+        loading
+            ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: _SelectPalette.onPrimaryFixed,
+              ),
+            )
+            : Text(
+              label,
+              style: GoogleFonts.spaceMono(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.6,
+                color: _SelectPalette.onPrimaryFixed,
+              ),
+            );
 
     final btn = ElevatedButton(
       onPressed: loading ? null : onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: _SelectPalette.primary,
         foregroundColor: _SelectPalette.onPrimaryFixed,
-        padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         elevation: 0,
       ),
       child: child,
     );
 
-    return fullWidth
-        ? SizedBox(width: double.infinity, child: btn)
-        : btn;
+    return fullWidth ? SizedBox(width: double.infinity, child: btn) : btn;
   }
 }
 
@@ -1640,7 +1727,9 @@ class _ErrorText extends StatelessWidget {
       child: Text(
         text,
         style: GoogleFonts.spaceMono(
-            fontSize: 11, color: Colors.redAccent.shade100),
+          fontSize: 11,
+          color: Colors.redAccent.shade100,
+        ),
       ),
     );
   }
@@ -1653,18 +1742,26 @@ class _LoadingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(children: [
-        const SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(
-              strokeWidth: 2, color: _SelectPalette.textDim),
-        ),
-        const SizedBox(width: 12),
-        Text('loading files…',
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: _SelectPalette.textDim,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'loading files…',
             style: GoogleFonts.spaceMono(
-                fontSize: 12, color: _SelectPalette.textDim)),
-      ]),
+              fontSize: 12,
+              color: _SelectPalette.textDim,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1676,25 +1773,30 @@ class _BackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      GestureDetector(
-        onTap: onBack,
-        child: const Icon(Icons.arrow_back_ios,
-            size: 14, color: _SelectPalette.textDim),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(
-          label,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.spaceMono(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: _SelectPalette.primary,
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: onBack,
+          child: const Icon(
+            Icons.arrow_back_ios,
+            size: 14,
+            color: _SelectPalette.textDim,
           ),
         ),
-      ),
-    ]);
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.spaceMono(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _SelectPalette.primary,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1716,44 +1818,56 @@ class _ResultRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(8),
-            border:
-                Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
-          child: Row(children: [
-            const Icon(Icons.hub_outlined,
-                size: 16, color: _SelectPalette.textDim),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    result.displayName,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.spaceMono(
+          child: Row(
+            children: [
+              const Icon(
+                Icons.hub_outlined,
+                size: 16,
+                color: _SelectPalette.textDim,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      result.displayName,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.spaceMono(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: _SelectPalette.primary),
-                  ),
-                  Text(
-                    result.id,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.spaceMono(
-                        fontSize: 10, color: _SelectPalette.textDim),
-                  ),
-                ],
+                        color: _SelectPalette.primary,
+                      ),
+                    ),
+                    Text(
+                      result.id,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 10,
+                        color: _SelectPalette.textDim,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${result.ggufFileCount} files',
-              style: GoogleFonts.spaceMono(
-                  fontSize: 10, color: _SelectPalette.textDim),
-            ),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right,
-                size: 16, color: _SelectPalette.textDim),
-          ]),
+              const SizedBox(width: 8),
+              Text(
+                '${result.ggufFileCount} files',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 10,
+                  color: _SelectPalette.textDim,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(
+                Icons.chevron_right,
+                size: 16,
+                color: _SelectPalette.textDim,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1775,34 +1889,39 @@ class _FileRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
-      child: Row(children: [
-        const Icon(Icons.memory_outlined,
-            size: 16, color: _SelectPalette.textDim),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                file.quantLabel.isNotEmpty ? file.quantLabel : file.rfilename,
-                style: GoogleFonts.spaceMono(
+      child: Row(
+        children: [
+          const Icon(
+            Icons.memory_outlined,
+            size: 16,
+            color: _SelectPalette.textDim,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  file.quantLabel.isNotEmpty ? file.quantLabel : file.rfilename,
+                  style: GoogleFonts.spaceMono(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: _SelectPalette.primary),
-              ),
-              Text(
-                file.sizeLabel,
-                style: GoogleFonts.spaceMono(
-                    fontSize: 10, color: _SelectPalette.textDim),
-              ),
-            ],
+                    color: _SelectPalette.primary,
+                  ),
+                ),
+                Text(
+                  file.sizeLabel,
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 10,
+                    color: _SelectPalette.textDim,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        _ShinyContinueButton(
-          label: 'GET',
-          onPressed: onDownload,
-        ),
-      ]),
+          _ShinyContinueButton(label: 'GET', onPressed: onDownload),
+        ],
+      ),
     );
   }
 }
@@ -1816,10 +1935,10 @@ class _AssistantSetupBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF10B981).withValues(alpha: 0.08),
+        color: AppPalette.text.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF10B981).withValues(alpha: 0.35),
+          color: AppPalette.text.withValues(alpha: 0.35),
           width: 1.5,
         ),
       ),
@@ -1830,12 +1949,12 @@ class _AssistantSetupBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+              color: AppPalette.text.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.auto_awesome,
-              color: Color(0xFF10B981),
+              color: AppPalette.text,
               size: 24,
             ),
           ),
@@ -1856,9 +1975,12 @@ class _AssistantSetupBanner extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                        color: AppPalette.text.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -1866,7 +1988,7 @@ class _AssistantSetupBanner extends StatelessWidget {
                         style: GoogleFonts.spaceMono(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF10B981),
+                          color: AppPalette.text,
                         ),
                       ),
                     ),
@@ -1888,7 +2010,7 @@ class _AssistantSetupBanner extends StatelessWidget {
           ElevatedButton(
             onPressed: onOpenAssistant,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: AppPalette.text,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               shape: RoundedRectangleBorder(

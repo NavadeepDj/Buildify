@@ -1,3 +1,5 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/services.dart';
@@ -19,9 +21,9 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 class _WizardPalette {
-  static const surfaceBody = Color(0xFF131312); // Matches dashboard
-  static const primary = Color(0xFFFFFFFF);
-  static const textDim = Color(0xFF8E9192);
+  static const surfaceBody = AppPalette.bg; // Matches dashboard
+  static const primary = AppPalette.primary;
+  static const textDim = AppPalette.muted;
   static const outline = Color(0xFF333333);
   static const hoverCard = Color(0x6620201F);
 }
@@ -70,20 +72,16 @@ class _HostProjectSourcePageState extends ConsumerState<HostProjectSourcePage> {
           tooltipPosition: TooltipPosition.top,
         ),
       ];
-      ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
-            steps,
-            tourKey: 'buildify_tour_wizard_source',
-          );
+      ref
+          .read(guidedTourNotifierProvider.notifier)
+          .checkAndAutoStartTour(steps, tourKey: 'buildify_tour_wizard_source');
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _WizardPalette.surfaceBody,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: GuidedTourOverlay(
         child: Scaffold(
           appBar: AppBar(
@@ -387,7 +385,7 @@ class _HostProjectSourcePageState extends ConsumerState<HostProjectSourcePage> {
           (_) => const PopScope(
             canPop: false,
             child: AlertDialog(
-              backgroundColor: Color(0xFF20201F),
+              backgroundColor: AppPalette.surfaceAlt,
               content: Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Row(
@@ -723,10 +721,7 @@ class _HostProjectSelectPageState extends State<HostProjectSelectPage> {
             .toList();
 
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _WizardPalette.surfaceBody,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -931,10 +926,9 @@ class _HostProjectSettingsPageState
           tooltipPosition: TooltipPosition.top,
         ),
       ];
-      ref.read(guidedTourNotifierProvider.notifier).checkAndAutoStartTour(
-            steps,
-            tourKey: 'buildify_tour_wizard_config',
-          );
+      ref
+          .read(guidedTourNotifierProvider.notifier)
+          .checkAndAutoStartTour(steps, tourKey: 'buildify_tour_wizard_config');
     });
   }
 
@@ -975,10 +969,7 @@ class _HostProjectSettingsPageState
     final previewUrl = 'https://$projName.buildify.app';
 
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _WizardPalette.surfaceBody,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: GuidedTourOverlay(
         child: Scaffold(
           appBar: AppBar(
@@ -1012,17 +1003,17 @@ class _HostProjectSettingsPageState
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        color: AppPalette.text.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          color: AppPalette.text.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
                         children: [
                           const Icon(
                             Icons.folder_open,
-                            color: Color(0xFF10B981),
+                            color: AppPalette.text,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
@@ -1031,7 +1022,7 @@ class _HostProjectSettingsPageState
                               widget.existingLocalPath!,
                               style: GoogleFonts.spaceMono(
                                 fontSize: 11,
-                                color: const Color(0xFF10B981),
+                                color: AppPalette.text,
                               ),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 2,

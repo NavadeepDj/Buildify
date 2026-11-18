@@ -1,3 +1,5 @@
+import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -19,11 +21,7 @@ import '../screens/ai_server_shell.dart';
 
 /// Projects dashboard — visual match for the buildify HTML mock.
 class ProjectsHomePage extends ConsumerStatefulWidget {
-  const ProjectsHomePage({
-    super.key,
-    this.onRunAiModel,
-    this.onOpenAiServer,
-  });
+  const ProjectsHomePage({super.key, this.onRunAiModel, this.onOpenAiServer});
 
   /// Navigates to the existing AI server shell without coupling imports.
   final VoidCallback? onRunAiModel;
@@ -87,7 +85,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                 : (isStarting ? Icons.sync : Icons.offline_bolt_outlined),
         statusIconColor:
             isRunning
-                ? const Color(0xFF10B981)
+                ? AppPalette.text
                 : (isStarting
                     ? const Color(0xFFF59E0B)
                     : const Color(0xFF9CA3AF)),
@@ -137,7 +135,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                     ? Icons.check_circle_outline
                     : Icons.offline_bolt_outlined,
             statusIconColor:
-                p.isLive ? const Color(0xFF10B981) : const Color(0xFF9CA3AF),
+                p.isLive ? AppPalette.text : const Color(0xFF9CA3AF),
             statusLabel: p.isLive ? 'online' : 'offline',
             statusColor:
                 p.isLive ? const Color(0xFF065F46) : const Color(0xFF374151),
@@ -324,10 +322,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
         MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
 
     return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _ProjectsPalette.surfaceBody,
-        textTheme: GoogleFonts.spaceMonoTextTheme(ThemeData.dark().textTheme),
-      ),
+      data: AppTheme.dark,
       child: GuidedTourOverlay(
         child: Scaffold(
           backgroundColor: _ProjectsPalette.surfaceBody,
@@ -393,15 +388,15 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
 }
 
 class _ProjectsPalette {
-  static const surface = Color(0xFF131312);
-  static const surfaceBody = Color(0xFF1F1F1E);
-  static const surfaceContainer = Color(0xFF20201F);
-  static const surfaceContainerHigh = Color(0xFF2A2A29);
-  static const surfaceMeta = Color(0xFF20201E);
-  static const onSurface = Color(0xFFE5E2E0);
-  static const onSurfaceVariant = Color(0xFFDDC0BA);
-  static const primary = Color(0xFFFFFFFF);
-  static const outline = Color(0xFFA48B86);
+  static const surface = AppPalette.bg;
+  static const surfaceBody = AppPalette.bg;
+  static const surfaceContainer = AppPalette.surfaceAlt;
+  static const surfaceContainerHigh = AppPalette.surfaceAlt;
+  static const surfaceMeta = AppPalette.surfaceAlt;
+  static const onSurface = AppPalette.text;
+  static const onSurfaceVariant = AppPalette.muted;
+  static const primary = AppPalette.primary;
+  static const outline = AppPalette.muted;
 }
 
 class _ServiceData {
@@ -1344,7 +1339,9 @@ class _NewServiceModal extends StatelessWidget {
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(
                           Icons.close,
-                          color: _ProjectsPalette.primary.withValues(alpha: 0.4),
+                          color: _ProjectsPalette.primary.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                       ),
                     ],
@@ -1353,17 +1350,17 @@ class _NewServiceModal extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      color: AppPalette.text.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                        color: AppPalette.text.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
                       children: [
                         const Icon(
                           Icons.lightbulb_outline,
-                          color: Color(0xFF10B981),
+                          color: AppPalette.text,
                           size: 18,
                         ),
                         const SizedBox(width: 8),
@@ -1373,7 +1370,7 @@ class _NewServiceModal extends StatelessWidget {
                             style: GoogleFonts.spaceMono(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF10B981),
+                              color: AppPalette.text,
                             ),
                           ),
                         ),
@@ -1394,7 +1391,8 @@ class _NewServiceModal extends StatelessWidget {
                     label: 'model setup assistant',
                     subtitle:
                         'Guided AI server setup, hardware tuning & public sharing',
-                    onTap: onOpenAiAssistant ??
+                    onTap:
+                        onOpenAiAssistant ??
                         () {
                           Navigator.pop(context);
                           Navigator.push(
@@ -1492,7 +1490,7 @@ class _ModalOption extends StatelessWidget {
                         subtitle!,
                         style: GoogleFonts.spaceMono(
                           fontSize: 10,
-                          color: const Color(0xFF8B949E),
+                          color: AppPalette.muted,
                           height: 1.3,
                         ),
                       ),
@@ -1502,7 +1500,7 @@ class _ModalOption extends StatelessWidget {
               ),
               const Icon(
                 Icons.chevron_right,
-                color: Color(0xFF8B949E),
+                color: AppPalette.muted,
                 size: 18,
               ),
             ],

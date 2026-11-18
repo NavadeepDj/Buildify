@@ -147,20 +147,25 @@ class AiServerController extends StateNotifier<AiServerState> {
   ModelAccessScope _modelAccessScope = ModelAccessScope.deviceNetwork;
   ModelAccessScope get modelAccessScope => _modelAccessScope;
   String? _runningApiKey;
+  bool _runningWithoutApiKey = false;
   int _publicationRevision = 0;
   Future<void> _scopeWrites = Future<void>.value();
 
   bool get _canPublishModel =>
       state.status == ServerStatus.running &&
       _modelAccessScope == ModelAccessScope.public &&
-      state.security.requireApiKey &&
-      state.security.apiKey.isNotEmpty &&
-      _runningApiKey == state.security.apiKey;
+      (state.security.requireApiKey
+          ? state.security.apiKey.isNotEmpty &&
+              _runningApiKey == state.security.apiKey
+          : _runningWithoutApiKey);
 
   Future<void> setModelAccessScope(ModelAccessScope scope) async {
     if (scope == ModelAccessScope.public &&
-        (!state.security.requireApiKey || state.security.apiKey.isEmpty)) {
-      throw StateError('Configure API-key protection before public sharing.');
+        state.security.requireApiKey &&
+        state.security.apiKey.isEmpty) {
+      throw StateError(
+        'Configure an API key or disable API-key authorization.',
+      );
     }
     final revision = ++_publicationRevision;
     // Preserve request order in storage as well as in memory.
@@ -197,7 +202,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   Future<void> startNamedTunnel(String projectName) async {
     if (!_canPublishModel) {
       throw StateError(
-        'Public sharing requires an approved scope and a restarted, key-protected model.',
+        'Public sharing requires an approved scope and a model started with the current authentication settings.',
       );
     }
     if (_namedUrlBusy || namedUrlStatus == 'Live') return;
@@ -859,6 +864,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     _appendLog('loading ${selectedModel.fileName}', LogType.system);
     _modelBasePath ??= await _native.getModelBasePath();
     final sec = state.security;
+    _runningWithoutApiKey = false;
     final response = await _native.startServer(
       modelPath: _modelPathFor(selectedModel),
       contextTokens: contextTokens,
@@ -910,6 +916,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     }
 
     _runningApiKey = sec.requireApiKey ? sec.apiKey : null;
+    _runningWithoutApiKey = !sec.requireApiKey;
     _startedAt = DateTime.now();
     _uptimeTimer?.cancel();
     var ticks = 0;
@@ -931,6 +938,7 @@ class AiServerController extends StateNotifier<AiServerState> {
           _discoveryBeacon.stop();
           _startedAt = null;
           _runningApiKey = null;
+          _runningWithoutApiKey = false;
           state = state.copyWith(
             status: ServerStatus.stopped,
             uptime: Duration.zero,
@@ -1043,6 +1051,7 @@ class AiServerController extends StateNotifier<AiServerState> {
     _discoveryBeacon.stop();
     _startedAt = null;
     _runningApiKey = null;
+    _runningWithoutApiKey = false;
     state = state.copyWith(
       status: ServerStatus.stopped,
       uptime: Duration.zero,
@@ -1054,7 +1063,7 @@ class AiServerController extends StateNotifier<AiServerState> {
   Future<bool> startTunnel() async {
     if (!_canPublishModel) {
       _appendLog(
-        'Public sharing needs an approved scope and active API-key protection.',
+        'Public sharing needs an approved scope and matching runtime authentication settings.',
         LogType.warning,
       );
       return false;

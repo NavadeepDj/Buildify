@@ -24,8 +24,12 @@ class HomeScreen extends ConsumerWidget {
       (m) => m.id == state.selectedModelId,
       orElse: () => state.models.first,
     );
-    final download = state.downloads[selected.id] ??
-        const ModelDownload(status: ModelDownloadStatus.notDownloaded, progress: 0);
+    final download =
+        state.downloads[selected.id] ??
+        const ModelDownload(
+          status: ModelDownloadStatus.notDownloaded,
+          progress: 0,
+        );
     final canStart = download.status == ModelDownloadStatus.downloaded;
 
     return ListView(
@@ -280,16 +284,16 @@ class _SecurityCardState extends ConsumerState<_SecurityCard> {
                           : sec.maskedApiKey,
                       style: const TextStyle(
                         color: AppPalette.teal,
-                        fontFamily: 'monospace',
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   IconButton(
                     tooltip: _revealKey ? 'Hide key' : 'Show key',
-                    onPressed: sec.apiKey.isEmpty
-                        ? null
-                        : () => setState(() => _revealKey = !_revealKey),
+                    onPressed:
+                        sec.apiKey.isEmpty
+                            ? null
+                            : () => setState(() => _revealKey = !_revealKey),
                     icon: Icon(
                       _revealKey
                           ? Icons.visibility_off_outlined
@@ -299,9 +303,10 @@ class _SecurityCardState extends ConsumerState<_SecurityCard> {
                   ),
                   IconButton(
                     tooltip: 'Copy key',
-                    onPressed: sec.apiKey.isEmpty
-                        ? null
-                        : () => _copyKey(context, sec.apiKey),
+                    onPressed:
+                        sec.apiKey.isEmpty
+                            ? null
+                            : () => _copyKey(context, sec.apiKey),
                     icon: const Icon(Icons.copy, size: 18),
                   ),
                   IconButton(
@@ -327,7 +332,9 @@ class _SecurityCardState extends ConsumerState<_SecurityCard> {
             _SliderRow(
               label: 'Idle timeout',
               valueLabel:
-                  sec.idleTimeoutMinutes == 0 ? 'Off' : '${sec.idleTimeoutMinutes} min',
+                  sec.idleTimeoutMinutes == 0
+                      ? 'Off'
+                      : '${sec.idleTimeoutMinutes} min',
               value: sec.idleTimeoutMinutes.toDouble(),
               min: 0,
               max: 60,
@@ -337,7 +344,9 @@ class _SecurityCardState extends ConsumerState<_SecurityCard> {
             _SliderRow(
               label: 'Stop below battery',
               valueLabel:
-                  sec.batteryStopPercent == 0 ? 'Off' : '${sec.batteryStopPercent}%',
+                  sec.batteryStopPercent == 0
+                      ? 'Off'
+                      : '${sec.batteryStopPercent}%',
               value: sec.batteryStopPercent.toDouble(),
               min: 0,
               max: 50,
@@ -364,9 +373,9 @@ class _SecurityCardState extends ConsumerState<_SecurityCard> {
   Future<void> _copyKey(BuildContext context, String key) async {
     await Clipboard.setData(ClipboardData(text: key));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('API key copied')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('API key copied')));
   }
 }
 
@@ -424,7 +433,8 @@ class _DeviceGrid extends StatelessWidget {
         ),
         _MetricPill(
           label: 'Battery',
-          value: '${device.batteryPercent}%${device.batteryCharging ? ' ⚡' : ''}',
+          value:
+              '${device.batteryPercent}%${device.batteryCharging ? ' ⚡' : ''}',
           color: AppPalette.amber,
         ),
         _MetricPill(

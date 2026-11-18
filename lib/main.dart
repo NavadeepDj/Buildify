@@ -10,8 +10,8 @@ import 'pages/hosted_account_page.dart';
 import 'pages/projects_home_page.dart';
 import 'pages/verification_page.dart';
 import 'screens/ai_server_shell.dart';
+import 'theme/app_theme.dart';
 import 'services/app_route_observer.dart';
-import 'theme/app_palette.dart';
 import 'providers/hosted_account_provider.dart';
 import 'providers/ai_server_provider.dart';
 import 'providers/management_account_provider.dart';
@@ -20,6 +20,18 @@ import 'services/management_api_config.dart';
 import 'services/mobile_catalog_sync.dart';
 import 'services/secure_auth_storage.dart';
 import 'services/windows_app_storage.dart';
+import 'assistant/status_probe_provider.dart';
+import 'screens/assistant_setup_screen.dart';
+import 'assistant/voice_tool_runtime.dart';
+import 'screens/voice_actions_screen.dart';
+import 'screens/android_voice_screen.dart';
+import 'widgets/voice_overlay_visibility.dart';
+import 'pages/host_project_wizard.dart';
+import 'pages/project_detail_page.dart';
+import 'pages/env_management_page.dart';
+
+final _appNavigatorKey = GlobalKey<NavigatorState>();
+final _voiceOverlayObserver = VoiceOverlayRouteObserver();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,46 +109,102 @@ class BuildifyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(_mobileCatalogSyncProvider);
-    final base = ThemeData.dark(useMaterial3: true);
+    final voiceBridge = ref.watch(statusProbeProvider);
+    final pendingVoiceRequests = ref.watch(pendingVoiceRequestsProvider);
+    ref.listen(voiceSetupRequestsProvider, (previous, next) {
+      if (previous == next) return;
+      _appNavigatorKey.currentState?.pushNamed('/voice-setup');
+    });
+    ref.listen(voiceNavigationProvider, (previous, next) {
+      if (next == null || previous == next) return;
+      Widget page;
+      switch (next.page) {
+        case 'wizard':
+          page = const HostProjectSourcePage();
+        case 'project':
+          page = ProjectDetailPage(projectId: next.projectId!);
+        case 'environment':
+          page = EnvManagementPage(projectId: next.projectId!);
+        default:
+          page = const VoiceActionsScreen();
+      }
+      _appNavigatorKey.currentState?.push(
+        MaterialPageRoute<void>(
+          settings:
+              page is VoiceActionsScreen
+                  ? const RouteSettings(name: '/voice-actions')
+                  : null,
+          builder: (_) => page,
+        ),
+      );
+    });
+
     return MaterialApp(
+      navigatorKey: _appNavigatorKey,
+      navigatorObservers: [_voiceOverlayObserver, appRouteObserver],
       debugShowCheckedModeBanner: false,
       title: 'Buildify AI Server',
-      theme: base.copyWith(
-        scaffoldBackgroundColor: AppPalette.bg,
-        colorScheme: base.colorScheme.copyWith(
-          primary: AppPalette.primary,
-          secondary: AppPalette.teal,
-          surface: AppPalette.surface,
-          error: AppPalette.error,
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: AppPalette.bg,
-          indicatorColor: AppPalette.primary.withValues(alpha: 0.16),
-          labelTextStyle: WidgetStateProperty.all(
-            const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      builder:
+          (context, child) => ValueListenableBuilder<bool>(
+            valueListenable: voiceOverlaysVisible,
+            builder:
+                (context, showVoiceOverlays, _) => Stack(
+                  children: [
+                    child ?? const SizedBox.shrink(),
+                    if (showVoiceOverlays && Platform.isAndroid)
+                      Positioned(
+                        right: 16,
+                        bottom: voiceBridge.asData?.value != null ? 140 : 76,
+                        child: FloatingActionButton.extended(
+                          heroTag: 'android-voice-call',
+                          onPressed:
+                              () => _appNavigatorKey.currentState?.push(
+                                MaterialPageRoute<void>(
+                                  settings: const RouteSettings(
+                                    name: '/voice-call',
+                                  ),
+                                  builder: (_) => const AndroidVoiceScreen(),
+                                ),
+                              ),
+                          icon: const Icon(Icons.call_outlined),
+                          label: const Text('Call Buildify'),
+                        ),
+                      ),
+                    if (showVoiceOverlays && voiceBridge.asData?.value != null)
+                      Positioned(
+                        right: 16,
+                        bottom: 76,
+                        child: FloatingActionButton.extended(
+                          heroTag: null,
+                          onPressed:
+                              () => _appNavigatorKey.currentState?.push(
+                                MaterialPageRoute<void>(
+                                  settings: const RouteSettings(
+                                    name: '/voice-actions',
+                                  ),
+                                  builder: (_) => const VoiceActionsScreen(),
+                                ),
+                              ),
+                          icon: Badge(
+                            label: Text('$pendingVoiceRequests'),
+                            child: const Icon(Icons.record_voice_over_outlined),
+                          ),
+                          label: const Text('Voice requests'),
+                        ),
+                      ),
+                  ],
+                ),
           ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            minimumSize: const Size.fromHeight(44),
-          ),
-        ),
-        cardTheme: CardThemeData(
-          color: AppPalette.surface,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppPalette.border),
-          ),
-        ),
-      ),
+      theme: AppTheme.dark,
       initialRoute: '/',
-      navigatorObservers: [appRouteObserver],
       onGenerateRoute: (settings) {
         final uri = Uri.tryParse(settings.name ?? '') ?? Uri();
+        if (uri.path == '/voice-setup') {
+          return MaterialPageRoute<void>(
+            builder: (_) => const AssistantSetupScreen(),
+            settings: settings,
+          );
+        }
         if (uri.path == '/verify') {
           final token = uri.queryParameters['token'];
           return MaterialPageRoute<void>(

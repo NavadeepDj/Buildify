@@ -5,7 +5,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/assistant-language-planning]
   push:
     branches: [main]
   workflow_dispatch:
@@ -22,6 +22,25 @@ env:
   FLUTTER_VERSION: '3.41.2'
 
 jobs:
+  voice-tools:
+    name: Voice tools (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test voice routing, invitations, callbacks and lifecycle
+        run: node --test scripts/bolna-webcall.test.mjs scripts/bolna-languages.test.mjs scripts/bolna-status-call.test.mjs scripts/voice-session.test.mjs scripts/voice-processes.test.mjs
+      - name: Test Windows launcher recovery
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./scripts/voice-launcher.test.ps1
+
   analyze:
     name: Format & analyze
     runs-on: ubuntu-latest
