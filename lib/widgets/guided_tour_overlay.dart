@@ -17,7 +17,7 @@ class GuidedTourOverlay extends ConsumerStatefulWidget {
 
 class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
     with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
+  late final AnimationController _pulseController;
 
   @override
   void initState() {
@@ -25,7 +25,18 @@ class _GuidedTourOverlayState extends ConsumerState<GuidedTourOverlay>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
+    ref.listenManual(
+      guidedTourNotifierProvider.select((tour) => tour.isActive),
+      (_, active) {
+        if (active) {
+          _pulseController.repeat(reverse: true);
+        } else {
+          _pulseController.stop();
+        }
+      },
+      fireImmediately: true,
+    );
   }
 
   @override

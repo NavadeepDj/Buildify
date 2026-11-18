@@ -34,13 +34,12 @@ class ProjectsHomePage extends ConsumerStatefulWidget {
 }
 
 class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
-    with TickerProviderStateMixin, RouteAware {
+    with RouteAware {
   static const _filters = ['all', 'services'];
 
   int _selectedFilter = 0;
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
-  late final AnimationController _meshController;
 
   final _topBarKey = GlobalKey();
   final _searchKey = GlobalKey();
@@ -180,10 +179,6 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
   @override
   void initState() {
     super.initState();
-    _meshController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat(reverse: true);
     _searchController.addListener(() => setState(() {}));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -260,7 +255,6 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
   @override
   void dispose() {
     appRouteObserver.unsubscribe(this);
-    _meshController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -326,60 +320,55 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
       child: GuidedTourOverlay(
         child: Scaffold(
           backgroundColor: _ProjectsPalette.surfaceBody,
-          body: Stack(
-            children: [
-              _MeshBackground(animation: _meshController),
-              SafeArea(
-                child: Column(
-                  children: [
-                    _ProjectsTopBar(
-                      key: _topBarKey,
-                      horizontalPadding: horizontalPadding,
-                      onReplayTour: _triggerReplayTour,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _ProjectsTopBar(
+                  key: _topBarKey,
+                  horizontalPadding: horizontalPadding,
+                  onReplayTour: _triggerReplayTour,
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      24,
+                      horizontalPadding,
+                      96,
                     ),
-                    Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          24,
-                          horizontalPadding,
-                          96,
-                        ),
+                    children: [
+                      _StaggeredFadeIn(
                         children: [
-                          _StaggeredFadeIn(
-                            children: [
-                              _SearchSection(
-                                key: _searchKey,
-                                controller: _searchController,
-                                focusNode: _searchFocusNode,
-                                filters: _filters,
-                                selectedFilter: _selectedFilter,
-                                onFilterSelected:
-                                    (i) => setState(() => _selectedFilter = i),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _StaggeredFadeIn(
-                            delayOffset: 1,
-                            children: [
-                              _EnvironmentSection(
-                                services: _filteredServices(
-                                  getServices(state, customProjects),
-                                ),
-                                onNewService: _openNewServiceModal,
-                                newServiceKey: _addServiceKey,
-                                firstCardKey: _serviceCardKey,
-                              ),
-                            ],
+                          _SearchSection(
+                            key: _searchKey,
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            filters: _filters,
+                            selectedFilter: _selectedFilter,
+                            onFilterSelected:
+                                (i) => setState(() => _selectedFilter = i),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      _StaggeredFadeIn(
+                        delayOffset: 1,
+                        children: [
+                          _EnvironmentSection(
+                            services: _filteredServices(
+                              getServices(state, customProjects),
+                            ),
+                            onNewService: _openNewServiceModal,
+                            newServiceKey: _addServiceKey,
+                            firstCardKey: _serviceCardKey,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -390,7 +379,6 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
 class _ProjectsPalette {
   static const surface = AppPalette.bg;
   static const surfaceBody = AppPalette.bg;
-  static const surfaceContainer = AppPalette.surfaceAlt;
   static const surfaceContainerHigh = AppPalette.surfaceAlt;
   static const surfaceMeta = AppPalette.surfaceAlt;
   static const onSurface = AppPalette.text;
@@ -437,68 +425,6 @@ class _ServiceData {
   final String? projectId;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
-}
-
-class _MeshBackground extends StatelessWidget {
-  const _MeshBackground({required this.animation});
-
-  final Animation<double> animation;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) {
-        final t = animation.value;
-        final scale = 1.0 + (t * 0.1);
-        final rotation = t * 0.035;
-        return Transform.scale(
-          scale: scale,
-          child: Transform.rotate(angle: rotation, child: child),
-        );
-      },
-      child: IgnorePointer(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Container(color: _ProjectsPalette.surface),
-            ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _cornerGlow(context, Alignment.topLeft),
-                      _cornerGlow(context, Alignment.topRight),
-                      _cornerGlow(context, Alignment.bottomRight),
-                      _cornerGlow(context, Alignment.bottomLeft),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _cornerGlow(BuildContext context, Alignment alignment) {
-    final size = MediaQuery.sizeOf(context);
-    return Align(
-      alignment: alignment,
-      child: Container(
-        width: size.width * 0.7,
-        height: size.height * 0.5,
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            colors: [Colors.white.withValues(alpha: 0.03), Colors.transparent],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _ProjectsTopBar extends StatelessWidget {
@@ -829,257 +755,248 @@ class _ServiceCardState extends State<_ServiceCard> {
               _hovered = false;
               _glowPosition = null;
             }),
-        child: Listener(
-          onPointerHover:
-              (e) => setState(() => _glowPosition = e.localPosition),
-          onPointerMove: (e) => setState(() => _glowPosition = e.localPosition),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _ProjectsPalette.surfaceContainer.withValues(
-                    alpha: 0.4,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.05),
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    if (_glowPosition != null && _hovered)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: RadialGradient(
-                                center: Alignment(
-                                  (_glowPosition!.dx / 320) * 2 - 1,
-                                  (_glowPosition!.dy / 200) * 2 - 1,
-                                ),
-                                radius: 0.45,
-                                colors: [
-                                  Colors.white.withValues(alpha: 0.1),
-                                  Colors.transparent,
-                                ],
-                              ),
+        onHover: (event) => setState(() => _glowPosition = event.localPosition),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppPalette.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+            child: Stack(
+              children: [
+                if (_glowPosition != null && _hovered)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment(
+                              (_glowPosition!.dx / 320) * 2 - 1,
+                              (_glowPosition!.dy / 200) * 2 - 1,
                             ),
+                            radius: 0.45,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.1),
+                              Colors.transparent,
+                            ],
                           ),
                         ),
                       ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final stacked = constraints.maxWidth < 520;
-                              final meta = _MetadataGrid(
-                                runtime: data.runtime,
-                                region: data.region,
-                                updated: data.updated,
-                                brightBorder: data.metadataBorderBright,
-                              );
-                              final info = Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final stacked = constraints.maxWidth < 520;
+                          final meta = _MetadataGrid(
+                            runtime: data.runtime,
+                            region: data.region,
+                            updated: data.updated,
+                            brightBorder: data.metadataBorderBright,
+                          );
+                          final info = Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        data.statusIcon,
-                                        color: data.statusIconColor,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          data.name,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.spaceMono(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: -0.36,
-                                            color: _ProjectsPalette.onSurface,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  Icon(
+                                    data.statusIcon,
+                                    color: data.statusIconColor,
+                                    size: 24,
                                   ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: data.statusColor,
-                                          borderRadius: BorderRadius.circular(
-                                            6,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      data.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.spaceMono(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.36,
+                                        color: _ProjectsPalette.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: data.statusColor,
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            data.statusLabel,
+                                            style: GoogleFonts.spaceMono(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
-                                        child: Text(
-                                          data.statusLabel,
+                                        Text(
+                                          data.version,
                                           style: GoogleFonts.spaceMono(
                                             fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
+                                            color: _ProjectsPalette
+                                                .onSurfaceVariant
+                                                .withValues(alpha: 0.4),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        data.version,
-                                        style: GoogleFonts.spaceMono(
-                                          fontSize: 10,
-                                          color: _ProjectsPalette
-                                              .onSurfaceVariant
-                                              .withValues(alpha: 0.4),
-                                        ),
-                                      ),
-                                      if (data.isEphemeral) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF5B21B6),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
+                                        if (data.isEphemeral)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
                                             ),
-                                            border: Border.all(
-                                              color: const Color(0xFF8B5CF6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF5B21B6),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: const Color(0xFF8B5CF6),
+                                              ),
                                             ),
-                                          ),
-                                          child: Text(
-                                            '⚡ EPHEMERAL',
-                                            style: GoogleFonts.spaceMono(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: const Color(0xFFDDD6FE),
+                                            child: Text(
+                                              '⚡ EPHEMERAL',
+                                              style: GoogleFonts.spaceMono(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFFDDD6FE),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      ] else if (data.projectId != null) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF064E3B),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
+                                          )
+                                        else if (data.projectId != null)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
                                             ),
-                                            border: Border.all(
-                                              color: const Color(0xFF059669),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF064E3B),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: const Color(0xFF059669),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              '📌 PERSISTENT',
+                                              style: GoogleFonts.spaceMono(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFFA7F3D0),
+                                              ),
                                             ),
                                           ),
-                                          child: Text(
-                                            '📌 PERSISTENT',
-                                            style: GoogleFonts.spaceMono(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: const Color(0xFFA7F3D0),
-                                            ),
-                                          ),
-                                        ),
                                       ],
-                                      const Spacer(),
-                                      if (data.onDelete != null)
-                                        IconButton(
-                                          onPressed: data.onDelete,
-                                          icon: const Icon(
-                                            Icons.delete_outline,
-                                            color: Color(0xFFF87171),
-                                            size: 18,
-                                          ),
-                                          tooltip: 'Delete / Destroy Project',
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                        ),
-                                    ],
+                                    ),
                                   ),
+                                  if (data.onDelete != null)
+                                    IconButton(
+                                      onPressed: data.onDelete,
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Color(0xFFF87171),
+                                        size: 18,
+                                      ),
+                                      tooltip: 'Delete / Destroy Project',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
                                 ],
-                              );
+                              ),
+                            ],
+                          );
 
-                              if (stacked) {
-                                return Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    info,
-                                    const SizedBox(height: 24),
-                                    meta,
-                                  ],
-                                );
-                              }
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: info),
-                                  const SizedBox(width: 24),
-                                  Flexible(child: meta),
-                                ],
-                              );
-                            },
+                          if (stacked) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                info,
+                                const SizedBox(height: 24),
+                                meta,
+                              ],
+                            );
+                          }
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: info),
+                              const SizedBox(width: 24),
+                              Flexible(child: meta),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    AnimatedOpacity(
+                      opacity: _hovered ? 1 : 0.6,
+                      duration: const Duration(milliseconds: 200),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.03),
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.05),
+                            ),
                           ),
                         ),
-                        AnimatedOpacity(
-                          opacity: _hovered ? 1 : 0.6,
-                          duration: const Duration(milliseconds: 200),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.03),
-                              border: Border(
-                                top: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                ),
+                        child: Row(
+                          children: [
+                            Text(
+                              data.actionLabel,
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1,
+                                color:
+                                    data.actionPrimary
+                                        ? _ProjectsPalette.primary
+                                        : _ProjectsPalette.onSurface,
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  data.actionLabel,
-                                  style: GoogleFonts.spaceMono(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1,
-                                    color:
-                                        data.actionPrimary
-                                            ? _ProjectsPalette.primary
-                                            : _ProjectsPalette.onSurface,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Icon(
-                                  data.actionIcon,
-                                  size: 18,
-                                  color:
-                                      data.actionPrimary
-                                          ? _ProjectsPalette.primary
-                                          : _ProjectsPalette.onSurface,
-                                ),
-                              ],
+                            const Spacer(),
+                            Icon(
+                              data.actionIcon,
+                              size: 18,
+                              color:
+                                  data.actionPrimary
+                                      ? _ProjectsPalette.primary
+                                      : _ProjectsPalette.onSurface,
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         ),
