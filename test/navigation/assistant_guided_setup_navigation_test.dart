@@ -46,25 +46,23 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
+  BackendProject project(String name, {bool running = false}) => BackendProject(
+    id: name,
+    name: name,
+    repoProvider: 'Static',
+    url: '',
+    lastDeployedAt: null,
+    isLive: running,
+  );
+
   testWidgets('projects dashboard settles at rest and after a phone scroll', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    BackendProject project(String id, String name) => BackendProject(
-      id: id,
-      name: name,
-      repoProvider: 'Static',
-      url: '',
-      lastDeployedAt: null,
-      isLive: false,
-    );
     await tester.pumpWidget(
       createTestApp(
-        projects: [
-          project('first', 'First project'),
-          project('second', 'Second project'),
-        ],
+        projects: [project('First project'), project('Second project')],
       ),
     );
     await tester.pumpAndSettle(
@@ -81,6 +79,67 @@ void main() {
       const Duration(seconds: 2),
     );
     expect(find.text('new service').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets(
+    'dashboard search and Running filter can recover from no matches',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        createTestApp(
+          projects: [project('Atlas', running: true), project('Beacon')],
+        ),
+      );
+      await tester.pumpAndSettle();
+      final search = find.byType(TextField);
+
+      await tester.enterText(search, '  bEAcON ');
+      await tester.pumpAndSettle();
+      expect(find.text('Beacon'), findsOneWidget);
+      expect(find.text('Atlas'), findsNothing);
+
+      await tester.tap(find.text('Running'));
+      await tester.pumpAndSettle();
+      expect(find.text('No matching running services'), findsOneWidget);
+      await tester.tap(find.text('Reset search and filter'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(search).controller!.text, isEmpty);
+      expect(find.text('Beacon'), findsOneWidget);
+      expect(find.text('Atlas'), findsOneWidget);
+
+      await tester.tap(find.text('Running'));
+      await tester.pumpAndSettle();
+      expect(find.text('Atlas'), findsOneWidget);
+      expect(find.text('Beacon'), findsNothing);
+      await tester.tap(find.text('All'));
+      await tester.enterText(search, 'Unknown');
+      await tester.pumpAndSettle();
+      expect(find.text('No matching services'), findsOneWidget);
+      await tester.tap(find.byTooltip('Clear search'));
+      await tester.pumpAndSettle();
+      expect(find.text('Beacon'), findsOneWidget);
+      expect(find.text('Atlas'), findsOneWidget);
+    },
+  );
+
+  testWidgets('dashboard distinguishes stopped services from an empty list', (
+    tester,
+  ) async {
+    await tester.pumpWidget(createTestApp());
+    await tester.pumpAndSettle();
+    expect(find.text('No services yet'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(createTestApp(projects: [project('Beacon')]));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Running'));
+    await tester.pumpAndSettle();
+    expect(find.text('No running services'), findsOneWidget);
+    expect(find.text('No services yet'), findsNothing);
+    await tester.tap(find.text('Show all services'));
+    await tester.pumpAndSettle();
+    expect(find.text('Beacon'), findsOneWidget);
   });
 
   group('Issue #145: Assistant Guided Setup Navigation Integration', () {
