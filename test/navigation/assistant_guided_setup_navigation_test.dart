@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:buildify_flutter/backend/embedded_backend.dart';
 import 'package:buildify_flutter/pages/projects_home_page.dart';
 import 'package:buildify_flutter/pages/ai_model_select_page.dart';
+import 'package:buildify_flutter/providers/ai_server_provider.dart';
 import 'package:buildify_flutter/screens/ai_server_shell.dart';
 import 'package:buildify_flutter/screens/network_screen.dart';
 import 'package:buildify_flutter/theme/app_theme.dart';
@@ -19,8 +21,19 @@ void main() {
     });
   });
 
-  Widget createTestApp({Widget? home}) {
+  Widget createTestApp({
+    Widget? home,
+    List<BackendProject> projects = const [],
+  }) {
     return ProviderScope(
+      overrides: [
+        embeddedBackendProvider.overrideWith((ref) {
+          final backend = EmbeddedBackendService(autoHydrate: false);
+          ref.onDispose(backend.dispose);
+          return backend;
+        }),
+        backendProjectsProvider.overrideWith((ref) => Stream.value(projects)),
+      ],
       child: MaterialApp(
         theme: AppTheme.dark,
         home: home ?? const ProjectsHomePage(),
@@ -32,6 +45,43 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
   }
+
+  testWidgets('projects dashboard settles at rest and after a phone scroll', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    BackendProject project(String id, String name) => BackendProject(
+      id: id,
+      name: name,
+      repoProvider: 'Static',
+      url: '',
+      lastDeployedAt: null,
+      isLive: false,
+    );
+    await tester.pumpWidget(
+      createTestApp(
+        projects: [
+          project('first', 'First project'),
+          project('second', 'Second project'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 100),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 2),
+    );
+    expect(find.text('First project'), findsOneWidget);
+    expect(find.byType(BackdropFilter), findsNothing);
+    await tester.drag(find.byType(ListView), const Offset(0, -260));
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 100),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 2),
+    );
+    expect(find.text('new service').hitTestable(), findsOneWidget);
+  });
 
   group('Issue #145: Assistant Guided Setup Navigation Integration', () {
     testWidgets(
