@@ -45,14 +45,15 @@ No Bolna account key is compiled into the app.
    If the pairing JSON is already in that computer's clipboard, use
    `./scripts/start-android-voice.ps1 -FromClipboard` instead.
 3. Copy `phone_url` from `build/android-voice/webcall-server.json` back to the
-   **Private HTTPS call link** field in the APK. Tap **Call with Bolna**, then
-   **Call Buildify** in Chrome and grant microphone access.
-4. Speak your request. Return to Buildify to review model setup or other action
+   **Phone call link** field in the APK. Tap **Call to control this phone**,
+   allow Buildify's microphone permission, then tap **Call Buildify** on the
+   in-app call page.
+4. Speak your request. Use **Review voice requests** to review model setup or other action
    approvals. The call targets this Android app; it uses a separate Bolna agent
    and session file from the Windows prototype.
 
 Keep the helper computer online and the Android app running during calls.
-Internet access is required on both. This is a browser voice call from a phone;
+Internet access is required on both. Android embeds the web call inside Buildify;
 ordinary telephone dial-in still needs a supported number configured in Bolna.
 Wispr is not the live-call transcriber. Calls use the existing Bolna speech
 providers and account balance.

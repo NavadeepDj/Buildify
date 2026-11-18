@@ -2,7 +2,7 @@
 
 In the Android APK, open **Call Buildify** and choose **This phone** or **My laptop**.
 Each mode uses a separate paired Bolna agent and private call link. The APK checks
-the link's target before opening Chrome; the call page and agent identify that
+the link's target before opening the in-app call screen; the call page and agent identify that
 target too. Changing the selection does not move or stop a running model.
 
 ## This phone
@@ -26,11 +26,13 @@ on the phone. Model plans use the existing explicit spoken Go approval.
 
 5. Privately copy `phone_url` from `build/android-voice/webcall-server.json` into
    the APK's **Phone call link**, then tap **Call to control this phone**.
-6. In Chrome, allow the microphone. Try “What device are you controlling?”,
+6. Allow Buildify's microphone permission, then tap **Call Buildify** inside the
+   embedded call page. Try “What device are you controlling?”,
    “Prepare a compatible model for short answers”, then approve the ready plan
    with “Go”. Ask for progress; only a successful inference check proves readiness.
 7. For existing static projects, say “List my projects”, then request a project by
-   name. Return to the phone app to review the pending project action.
+   name. Use **Review voice requests** inside the call screen to review the
+   pending project action; the call stays mounted while reviewing.
 
 The Android app and its voice tunnel must remain alive. Android background and
 battery restrictions can end long sessions. Publishing a model or project also
@@ -112,6 +114,42 @@ the APK to revoke its pairing. Keep private links and pairing details private.
 For telephone callbacks after an action finishes, see
 [the callback guide](bolna-phone-status-calls.md); callback numbers are configured
 separately and switching device modes does not schedule a callback.
+
+## In-app audio lifecycle
+
+The Android call route embeds the existing HTTPS page in Android System WebView
+using a Flutter platform view. No new Flutter WebView package or native Bolna
+audio protocol is needed. The helper keeps the Bolna API key; the native view
+receives only the validated private invitation. Runtime microphone permission
+is requested before loading the page. WebView microphone grants additionally
+check the exact paired origin and reject camera or unexpected resources.
+
+**End call**, leaving the call route, audio-focus interruption, or putting
+Buildify in the background ends media and restores the audio mode. It does not
+stop models or projects. In-app review routes keep the call view mounted.
+After a background interruption, return and use **Retry**, which rechecks the
+target before loading a new call page. Background and lock-screen calling are
+not implemented. Browser calling remains available by opening the private link
+manually. Update Android System WebView if microphone support is unavailable.
+
+The embedded call still requires the trusted helper and a reachable target.
+It does not resolve tunnel outages or guarantee immunity from OEM process
+freezing. Physical-device microphone, playback, headset/Bluetooth, interruption,
+and English/Telugu/Hindi switching must be checked on an installed APK; mocked
+widget tests do not prove audio quality or a successful conversation.
+
+### Validation recorded on 16 November 2026
+
+The ARM64 debug APK and web release build compiled successfully. Full-project
+analysis reported no issues; the full Flutter suite passed 193 tests with three
+skipped. After the final initialization-recovery changes, all seven call-screen
+tests and focused analysis passed. The helper's 18 Node tests and all three
+native origin/navigation/microphone-policy tests passed. The native tests are
+also included in the Android CI build job.
+
+No Android device was connected to ADB during this run. The APK has not been
+installed or certified for live two-way audio, language switching, or audio
+device routing. Complete those checks using the flow above before closing #150.
 
 Automated tests cover independent routing, target checks, UI mode selection and
 Android readiness handling. Real audio calls and model inference on a physical

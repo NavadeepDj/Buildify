@@ -18,9 +18,46 @@ import java.net.NetworkInterface
 
 class MainActivity : FlutterActivity() {
     private val channelName = "buildify.ai/server"
+    private var microphoneResult: MethodChannel.Result? = null
+    private var voiceCalls: VoiceCallViewFactory? = null
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 4207) {
+            microphoneResult?.success(grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED)
+            microphoneResult = null
+        }
+    }
+
+    override fun onStop() {
+        voiceCalls?.endAll()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        microphoneResult?.success(false)
+        microphoneResult = null
+        voiceCalls?.endAll()
+        super.onDestroy()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        voiceCalls = VoiceCallViewFactory(this, flutterEngine.dartExecutor.binaryMessenger)
+        flutterEngine.platformViewsController.registry.registerViewFactory("buildify.ai/voice-call", voiceCalls!!)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "buildify.ai/voice-microphone")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "request") {
+                    result.notImplemented()
+                } else if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    result.success(true)
+                } else if (microphoneResult != null) {
+                    result.success(false)
+                } else {
+                    microphoneResult = result
+                    requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 4207)
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "buildify.ai/voice")
             .setMethodCallHandler { call, result ->
                 try {

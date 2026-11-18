@@ -66,6 +66,10 @@ flutter {
     source = "../.."
 }
 
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+}
+
 configurations.all {
     resolutionStrategy {
         force("androidx.browser:browser:1.8.0")

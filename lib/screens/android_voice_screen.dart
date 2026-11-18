@@ -4,13 +4,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../assistant/status_probe_provider.dart';
 import '../assistant/voice_bridge_session.dart';
 import '../services/android_voice_tunnel.dart';
 import '../services/voice_call_invitation.dart';
 import 'voice_actions_screen.dart';
+import 'embedded_voice_call_screen.dart';
 
 /// Pairing credentials remain in this app session and are copied only on request.
 class AndroidVoiceScreen extends ConsumerStatefulWidget {
@@ -188,9 +188,13 @@ class _AndroidVoiceScreenState extends ConsumerState<AndroidVoiceScreen> {
       final uri = VoiceCallInvitation.parse(_callLink.text);
       await VoiceCallInvitation.verify(uri, target);
       if (!mounted) return;
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw StateError('Browser unavailable');
-      }
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/voice-call'),
+          builder:
+              (_) => EmbeddedVoiceCallScreen(invitation: uri, target: target),
+        ),
+      );
     } on FormatException catch (error) {
       if (mounted) setState(() => _message = error.message);
     } catch (_) {
@@ -349,8 +353,8 @@ class _AndroidVoiceScreenState extends ConsumerState<AndroidVoiceScreen> {
             const SizedBox(height: 16),
             Text(
               onPhone
-                  ? 'Allow microphone access in Chrome. Keep Buildify open; return here for project approvals. Reconnecting creates new pairing details. Bolna processes your voice online.'
-                  : 'Allow microphone access in Chrome. The assistant will identify the laptop before handling requests. Bolna processes your voice online.',
+                  ? 'Allow microphone access in Buildify. Calls stay inside the app, with voice requests available for review. Reconnecting creates new pairing details. Bolna processes your voice online.'
+                  : 'Allow microphone access in Buildify. Calls stay inside the app. The assistant will identify the laptop before handling requests. Bolna processes your voice online.',
             ),
           ],
         ],

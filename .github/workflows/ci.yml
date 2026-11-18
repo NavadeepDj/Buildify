@@ -127,6 +127,11 @@ jobs:
         if: matrix.target == 'apk'
         run: flutter build apk --debug
 
+      - name: Test Android voice call permissions and navigation
+        if: matrix.target == 'apk'
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --tests com.example.buildify_flutter.VoiceCallPolicyTest
+
       - name: Build web
         if: matrix.target == 'web'
         run: flutter build web --release
