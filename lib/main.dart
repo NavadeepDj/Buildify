@@ -1,6 +1,8 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/ai_model_select_page.dart';
@@ -9,10 +11,13 @@ import 'pages/projects_home_page.dart';
 import 'pages/verification_page.dart';
 import 'screens/ai_server_shell.dart';
 import 'theme/app_theme.dart';
+import 'services/app_route_observer.dart';
 import 'providers/hosted_account_provider.dart';
+import 'providers/ai_server_provider.dart';
 import 'providers/management_account_provider.dart';
 import 'services/hosted_auth_config.dart';
 import 'services/management_api_config.dart';
+import 'services/mobile_catalog_sync.dart';
 import 'services/secure_auth_storage.dart';
 import 'services/windows_app_storage.dart';
 import 'assistant/status_probe_provider.dart';
@@ -30,6 +35,11 @@ final _voiceOverlayObserver = VoiceOverlayRouteObserver();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
+  await GoogleFonts.pendingFonts([
+    GoogleFonts.spaceMono(),
+    GoogleFonts.spaceMono(fontWeight: FontWeight.w700),
+  ]);
   await configureWindowsAppStorage();
   SupabaseClient? client;
   HostedAuthConfig? authConfig;
@@ -83,11 +93,22 @@ Future<void> main() async {
   );
 }
 
+final _mobileCatalogSyncProvider = Provider<void>((ref) {
+  final client = ref.watch(hostedClientProvider);
+  if (client == null || !(Platform.isAndroid || Platform.isIOS)) return;
+  final sync = MobileCatalogSync(
+    client,
+    () => ref.read(embeddedBackendProvider),
+  );
+  ref.onDispose(sync.dispose);
+});
+
 class BuildifyApp extends ConsumerWidget {
   const BuildifyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(_mobileCatalogSyncProvider);
     final voiceBridge = ref.watch(statusProbeProvider);
     final pendingVoiceRequests = ref.watch(pendingVoiceRequestsProvider);
     ref.listen(voiceSetupRequestsProvider, (previous, next) {
@@ -120,7 +141,7 @@ class BuildifyApp extends ConsumerWidget {
 
     return MaterialApp(
       navigatorKey: _appNavigatorKey,
-      navigatorObservers: [_voiceOverlayObserver],
+      navigatorObservers: [_voiceOverlayObserver, appRouteObserver],
       debugShowCheckedModeBanner: false,
       title: 'Buildify AI Server',
       builder:
