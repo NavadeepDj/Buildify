@@ -35,11 +35,11 @@ class ProjectsHomePage extends ConsumerStatefulWidget {
   ConsumerState<ProjectsHomePage> createState() => _ProjectsHomePageState();
 }
 
+enum _ServiceFilter { all, running }
+
 class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
     with RouteAware {
-  static const _filters = ['all', 'services'];
-
-  int _selectedFilter = 0;
+  _ServiceFilter _selectedFilter = _ServiceFilter.all;
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
 
@@ -181,8 +181,6 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() => setState(() {}));
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndStartTour();
     });
@@ -224,7 +222,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
       GuidedTourStep(
         title: 'Search & Quick Filters',
         description:
-            'Filter running microservices or search across your active resource ecosystem.',
+            'Search by project or model name, or choose Running to show active services.',
         targetKey: _searchKey,
         tooltipPosition: TooltipPosition.bottom,
       ),
@@ -262,15 +260,12 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
     super.dispose();
   }
 
-  List<_ServiceData> _filteredServices(List<_ServiceData> services) {
-    List<_ServiceData> filtered = services;
-    if (_selectedFilter == 1) {
-      // 'services' tab
-      filtered = services.where((s) => s.statusLabel == 'online').toList();
-    }
-    final q = _searchController.text.trim().toLowerCase();
-    if (q.isEmpty) return filtered;
-    return filtered.where((s) => s.name.toLowerCase().contains(q)).toList();
+  void _resetFilters() {
+    _searchFocusNode.unfocus();
+    setState(() {
+      _searchController.clear();
+      _selectedFilter = _ServiceFilter.all;
+    });
   }
 
   void _openNewServiceModal() {
@@ -314,6 +309,13 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
     final state = ref.watch(aiServerProvider);
     final customProjectsAsync = ref.watch(backendProjectsProvider);
     final customProjects = customProjectsAsync.value ?? const [];
+    final query = _searchController.text.trim().toLowerCase();
+    final runningOnly = _selectedFilter == _ServiceFilter.running;
+    final services =
+        getServices(state, customProjects)
+            .where((service) => !runningOnly || service.statusLabel == 'online')
+            .where((service) => service.name.toLowerCase().contains(query))
+            .toList();
     final horizontalPadding =
         MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
     final bottomPadding = math.max(
@@ -337,6 +339,8 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                 ),
                 Expanded(
                   child: ListView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: EdgeInsets.fromLTRB(
                       horizontalPadding,
                       24,
@@ -350,10 +354,14 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                             key: _searchKey,
                             controller: _searchController,
                             focusNode: _searchFocusNode,
-                            filters: _filters,
                             selectedFilter: _selectedFilter,
-                            onFilterSelected:
-                                (i) => setState(() => _selectedFilter = i),
+                            onSearchChanged: (_) => setState(() {}),
+                            onClearSearch:
+                                () => setState(_searchController.clear),
+                            onFilterSelected: (filter) {
+                              _searchFocusNode.unfocus();
+                              setState(() => _selectedFilter = filter);
+                            },
                           ),
                         ],
                       ),
@@ -362,9 +370,10 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                         delayOffset: 1,
                         children: [
                           _EnvironmentSection(
-                            services: _filteredServices(
-                              getServices(state, customProjects),
-                            ),
+                            services: services,
+                            searchActive: query.isNotEmpty,
+                            runningOnly: runningOnly,
+                            onResetFilters: _resetFilters,
                             onNewService: _openNewServiceModal,
                             newServiceKey: _addServiceKey,
                             firstCardKey: _serviceCardKey,
@@ -501,16 +510,18 @@ class _SearchSection extends StatelessWidget {
     super.key,
     required this.controller,
     required this.focusNode,
-    required this.filters,
     required this.selectedFilter,
+    required this.onSearchChanged,
+    required this.onClearSearch,
     required this.onFilterSelected,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
-  final List<String> filters;
-  final int selectedFilter;
-  final ValueChanged<int> onFilterSelected;
+  final _ServiceFilter selectedFilter;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
+  final ValueChanged<_ServiceFilter> onFilterSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -520,21 +531,31 @@ class _SearchSection extends StatelessWidget {
         TextField(
           controller: controller,
           focusNode: focusNode,
+          textInputAction: TextInputAction.search,
+          onChanged: onSearchChanged,
           onTapOutside: (_) => focusNode.unfocus(),
           style: GoogleFonts.spaceMono(
             fontSize: 14,
             color: _ProjectsPalette.onSurface,
           ),
           decoration: InputDecoration(
-            hintText: 'search resources...',
-            hintStyle: GoogleFonts.spaceMono(
+            labelText: 'Search projects and models',
+            labelStyle: GoogleFonts.spaceMono(
               fontSize: 14,
-              color: _ProjectsPalette.outline.withValues(alpha: 0.3),
+              color: _ProjectsPalette.outline,
             ),
-            prefixIcon: Icon(
+            prefixIcon: const Icon(
               Icons.search,
-              color: _ProjectsPalette.outline.withValues(alpha: 0.5),
+              color: _ProjectsPalette.outline,
             ),
+            suffixIcon:
+                controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                      tooltip: 'Clear search',
+                      onPressed: onClearSearch,
+                      icon: const Icon(Icons.close),
+                    ),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.05),
             contentPadding: const EdgeInsets.all(16),
@@ -552,47 +573,18 @@ class _SearchSection extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 32),
-        Row(
-          children: List.generate(filters.length, (i) {
-            final selected = i == selectedFilter;
-            return Padding(
-              padding: EdgeInsets.only(right: i < filters.length - 1 ? 32 : 0),
-              child: InkWell(
-                onTap: () => onFilterSelected(i),
-                child: Container(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color:
-                            selected
-                                ? _ProjectsPalette.primary
-                                : Colors.transparent,
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    filters[i],
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                      color:
-                          selected
-                              ? _ProjectsPalette.primary
-                              : _ProjectsPalette.onSurfaceVariant.withValues(
-                                alpha: 0.6,
-                              ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
+        const SizedBox(height: 16),
+        SegmentedButton<_ServiceFilter>(
+          segments: const [
+            ButtonSegment(value: _ServiceFilter.all, label: Text('All')),
+            ButtonSegment(
+              value: _ServiceFilter.running,
+              label: Text('Running'),
+            ),
+          ],
+          selected: {selectedFilter},
+          onSelectionChanged: (selection) => onFilterSelected(selection.single),
         ),
-        Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
       ],
     );
   }
@@ -601,18 +593,53 @@ class _SearchSection extends StatelessWidget {
 class _EnvironmentSection extends StatelessWidget {
   const _EnvironmentSection({
     required this.services,
+    required this.searchActive,
+    required this.runningOnly,
+    required this.onResetFilters,
     required this.onNewService,
     this.newServiceKey,
     this.firstCardKey,
   });
 
   final List<_ServiceData> services;
+  final bool searchActive;
+  final bool runningOnly;
+  final VoidCallback onResetFilters;
   final VoidCallback onNewService;
   final Key? newServiceKey;
   final Key? firstCardKey;
 
   @override
   Widget build(BuildContext context) {
+    final (emptyTitle, emptyMessage, emptyIcon, resetLabel) = switch ((
+      searchActive,
+      runningOnly,
+    )) {
+      (true, true) => (
+        'No matching running services',
+        'Try another name or reset the search and filter.',
+        Icons.search_off,
+        'Reset search and filter',
+      ),
+      (true, false) => (
+        'No matching services',
+        'Try another project or model name.',
+        Icons.search_off,
+        'Clear search',
+      ),
+      (false, true) => (
+        'No running services',
+        'Running projects and AI models appear here.',
+        Icons.pause_circle_outline,
+        'Show all services',
+      ),
+      (false, false) => (
+        'No services yet',
+        'Select New service to host a project or run an AI model.',
+        Icons.folder_open_outlined,
+        null,
+      ),
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -676,32 +703,41 @@ class _EnvironmentSection extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.folder_open_outlined,
+                      emptyIcon,
                       size: 36,
                       color: _ProjectsPalette.primary.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'no projects',
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _ProjectsPalette.onSurface,
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      emptyTitle,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: _ProjectsPalette.onSurface,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'No projects or active AI models found.\nTap "+ Add New" below to host a project or run an AI model.',
+                    emptyMessage,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.spaceMono(
                       fontSize: 12,
-                      color: _ProjectsPalette.onSurfaceVariant.withValues(
-                        alpha: 0.6,
-                      ),
+                      color: _ProjectsPalette.onSurfaceVariant,
                       height: 1.5,
                     ),
                   ),
+                  if (resetLabel != null) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: onResetFilters,
+                      child: Text(resetLabel, textAlign: TextAlign.center),
+                    ),
+                  ],
                 ],
               ),
             ),
