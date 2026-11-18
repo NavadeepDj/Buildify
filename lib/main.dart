@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -144,57 +145,78 @@ class BuildifyApp extends ConsumerWidget {
       navigatorObservers: [_voiceOverlayObserver, appRouteObserver],
       debugShowCheckedModeBanner: false,
       title: 'Buildify AI Server',
-      builder:
-          (context, child) => ValueListenableBuilder<bool>(
-            valueListenable: voiceOverlaysVisible,
-            builder:
-                (context, showVoiceOverlays, _) => Stack(
-                  children: [
-                    child ?? const SizedBox.shrink(),
-                    if (showVoiceOverlays && Platform.isAndroid)
-                      Positioned(
-                        right: 16,
-                        bottom: voiceBridge.asData?.value != null ? 140 : 76,
-                        child: FloatingActionButton.extended(
-                          heroTag: 'android-voice-call',
-                          onPressed:
-                              () => _appNavigatorKey.currentState?.push(
-                                MaterialPageRoute<void>(
-                                  settings: const RouteSettings(
-                                    name: '/voice-call',
-                                  ),
-                                  builder: (_) => const AndroidVoiceScreen(),
+      builder: (context, child) {
+        final showCall =
+            !kIsWeb && Theme.of(context).platform == TargetPlatform.android;
+        final showRequests = voiceBridge.asData?.value != null;
+        const shortcutBottom = 76.0;
+        const shortcutHeight = 56.0;
+        const shortcutGap = 8.0;
+        final callBottom =
+            showRequests
+                ? shortcutBottom + shortcutHeight + shortcutGap
+                : shortcutBottom;
+        final clearance =
+            showCall || showRequests
+                ? (showCall ? callBottom : shortcutBottom) +
+                    shortcutHeight +
+                    12.0
+                : 0.0;
+        return ValueListenableBuilder<bool>(
+          valueListenable: voiceOverlaysVisible,
+          builder:
+              (context, showVoiceOverlays, _) => Stack(
+                children: [
+                  // Keep the list position stable when a dialog hides the shortcuts.
+                  VoiceOverlayInset(
+                    bottom: clearance,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                  if (showVoiceOverlays && showCall)
+                    Positioned(
+                      right: 16,
+                      bottom: callBottom,
+                      child: FloatingActionButton.extended(
+                        heroTag: 'android-voice-call',
+                        onPressed:
+                            () => _appNavigatorKey.currentState?.push(
+                              MaterialPageRoute<void>(
+                                settings: const RouteSettings(
+                                  name: '/voice-call',
                                 ),
+                                builder: (_) => const AndroidVoiceScreen(),
                               ),
-                          icon: const Icon(Icons.call_outlined),
-                          label: const Text('Call Buildify'),
-                        ),
+                            ),
+                        icon: const Icon(Icons.call_outlined),
+                        label: const Text('Call Buildify'),
                       ),
-                    if (showVoiceOverlays && voiceBridge.asData?.value != null)
-                      Positioned(
-                        right: 16,
-                        bottom: 76,
-                        child: FloatingActionButton.extended(
-                          heroTag: null,
-                          onPressed:
-                              () => _appNavigatorKey.currentState?.push(
-                                MaterialPageRoute<void>(
-                                  settings: const RouteSettings(
-                                    name: '/voice-actions',
-                                  ),
-                                  builder: (_) => const VoiceActionsScreen(),
+                    ),
+                  if (showVoiceOverlays && showRequests)
+                    Positioned(
+                      right: 16,
+                      bottom: shortcutBottom,
+                      child: FloatingActionButton.extended(
+                        heroTag: null,
+                        onPressed:
+                            () => _appNavigatorKey.currentState?.push(
+                              MaterialPageRoute<void>(
+                                settings: const RouteSettings(
+                                  name: '/voice-actions',
                                 ),
+                                builder: (_) => const VoiceActionsScreen(),
                               ),
-                          icon: Badge(
-                            label: Text('$pendingVoiceRequests'),
-                            child: const Icon(Icons.record_voice_over_outlined),
-                          ),
-                          label: const Text('Voice requests'),
+                            ),
+                        icon: Badge(
+                          label: Text('$pendingVoiceRequests'),
+                          child: const Icon(Icons.record_voice_over_outlined),
                         ),
+                        label: const Text('Voice requests'),
                       ),
-                  ],
-                ),
-          ),
+                    ),
+                ],
+              ),
+        );
+      },
       theme: AppTheme.dark,
       initialRoute: '/',
       onGenerateRoute: (settings) {

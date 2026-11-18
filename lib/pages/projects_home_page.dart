@@ -1,6 +1,7 @@
 import '../theme/app_palette.dart';
 import '../theme/app_theme.dart';
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,7 @@ import '../services/app_route_observer.dart';
 import '../services/guided_tour_service.dart';
 import '../widgets/buildify_logo.dart';
 import '../widgets/guided_tour_overlay.dart';
+import '../widgets/voice_overlay_visibility.dart';
 import 'deployment_page.dart';
 import 'host_project_wizard.dart';
 import 'hosted_account_page.dart';
@@ -314,6 +316,11 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
     final customProjects = customProjectsAsync.value ?? const [];
     final horizontalPadding =
         MediaQuery.sizeOf(context).width >= 768 ? 32.0 : 16.0;
+    final bottomPadding = math.max(
+      96.0,
+      VoiceOverlayInset.bottomOf(context) -
+          MediaQuery.paddingOf(context).bottom,
+    );
 
     return Theme(
       data: AppTheme.dark,
@@ -334,7 +341,7 @@ class _ProjectsHomePageState extends ConsumerState<ProjectsHomePage>
                       horizontalPadding,
                       24,
                       horizontalPadding,
-                      96,
+                      bottomPadding,
                     ),
                     children: [
                       _StaggeredFadeIn(
