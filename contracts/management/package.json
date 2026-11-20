@@ -7,10 +7,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "lint": "redocly lint openapi.json --config redocly.yaml",
-    "generate": "openapi-typescript openapi.json --output generated/management.d.ts",
+    "lint": "redocly lint openapi.json --config redocly.yaml && redocly lint devices/openapi.json --config redocly.yaml",
+    "generate": "openapi-typescript openapi.json --output generated/management.d.ts && openapi-typescript devices/openapi.json --output generated/devices.d.ts",
     "test": "node --test test/*.test.mjs",
-    "check": "npm run lint && npm run generate && npm test && git diff --exit-code -- generated/management.d.ts"
+    "check": "npm run lint && npm run generate && npm test && git diff --exit-code -- generated/management.d.ts generated/devices.d.ts"
   },
   "devDependencies": {
     "@redocly/cli": "2.72.1",

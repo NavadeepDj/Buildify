@@ -1,0 +1,1483 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HostAny Device Enrollment API — proposal",
+    "version": "0.1.0-draft.1",
+    "description": "Proposed #84 contract only. NOT implemented or deployed. Separate from the reviewed foundation contract. Requires review and #82 adapter handoff before runtime integration.",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "servers": [
+    {
+      "url": "https://management.example.invalid",
+      "description": "Placeholder only. Configure the real environment base URL and function prefix separately."
+    }
+  ],
+  "tags": [
+    {
+      "name": "Devices",
+      "description": "Owned device enrollment and independently revocable credentials."
+    }
+  ],
+  "security": [
+    {
+      "UserSession": []
+    }
+  ],
+  "paths": {
+    "/v1/devices": {
+      "post": {
+        "operationId": "enrollDevice",
+        "summary": "Enroll this hosting installation.",
+        "description": "Verified owner session required. Direct enrollment on the host; no pairing code. Never accept owner_id. Idempotency is scoped to verified owner plus enrollment_id and the full normalized request, including secret digest. An identical retry returns the same ID and current record, but never reactivates a revoked device. Different contents under the same enrollment ID return 409. See the lifecycle policy for secure persistence and retry recovery.",
+        "tags": [
+          "Devices"
+        ],
+        "security": [
+          {
+            "UserSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response. No credential or verifier is returned.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "200": {
+            "description": "Identical enrollment retry returns the original device; it never issues a second identity.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-release-status": "proposed-not-deployed",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceEnrollment"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listOwnedDevices",
+        "summary": "List only the current owner’s devices.",
+        "description": "Includes active and revoked records. Stable server keyset pagination ordered by created_at then id, scoped to verified owner. Cursors are opaque and validated; a foreign/invalid cursor returns 400, never changes ownership scope. No presence or reachability promise.",
+        "tags": [
+          "Devices"
+        ],
+        "security": [
+          {
+            "UserSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. No credential or verifier is returned.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-release-status": "proposed-not-deployed",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ]
+      }
+    },
+    "/v1/devices/{device_id}": {
+      "get": {
+        "operationId": "getOwnedDevice",
+        "summary": "Read one owned device.",
+        "description": "Foreign and missing resources both return 404. No secret, digest, owner selector or machine fingerprint is exposed.",
+        "tags": [
+          "Devices"
+        ],
+        "security": [
+          {
+            "UserSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. No credential or verifier is returned.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-release-status": "proposed-not-deployed",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "description": "Resource selector only; ownership must be loaded from server records.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "renameOwnedDevice",
+        "summary": "Rename one owned device.",
+        "description": "Only display_name changes. Duplicate names are allowed. If-Match guards concurrent changes; revoked devices cannot be renamed.",
+        "tags": [
+          "Devices"
+        ],
+        "security": [
+          {
+            "UserSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. No credential or verifier is returned.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-release-status": "proposed-not-deployed",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRename"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "description": "Resource selector only; ownership must be loaded from server records.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Quoted integer revision from the last Device response, for example \"3\". Mutations are serialized with revocation.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\"[1-9][0-9]{0,9}\"$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/devices/{device_id}/credentials/rotate": {
+      "post": {
+        "operationId": "rotateOwnedDeviceCredential",
+        "summary": "Replace one device credential.",
+        "description": "Verified owner session on the hosting installation required. Persist the new candidate secret in secure storage first. Atomic rotation invalidates the old credential with no grace period. An exact retry of the most recent rotation with no intervening mutation returns the committed result before stale If-Match rejection. Reuse of that rotation ID with different inputs returns 409; intervening mutations require reconciliation and 412. Revocation always wins; replay cannot restore access. See lifecycle policy.",
+        "tags": [
+          "Devices"
+        ],
+        "security": [
+          {
+            "UserSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. No credential or verifier is returned.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-release-status": "proposed-not-deployed",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRotation"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "description": "Resource selector only; ownership must be loaded from server records.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Quoted integer revision from the last Device response, for example \"3\". Mutations are serialized with revocation.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\"[1-9][0-9]{0,9}\"$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/devices/{device_id}/revoke": {
+      "post": {
+        "operationId": "revokeOwnedDevice",
+        "summary": "Revoke one owned hosting device.",
+        "description": "No body. Idempotent, monotonic revocation; repeated calls return current revoked record. After commit all new device authorizations fail. No device credential or owner input can reactivate this ID. Does not delete files, stop local hosting, or guarantee cancellation of in-flight work.",
+        "tags": [
+          "Devices"
+        ],
+        "security": [
+          {
+            "UserSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. No credential or verifier is returned.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-release-status": "proposed-not-deployed",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "description": "Resource selector only; ownership must be loaded from server records.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/agent/device": {
+      "get": {
+        "operationId": "getAgentDeviceIdentity",
+        "summary": "Verify this device’s independent credential.",
+        "description": "Accepts only the opaque device bearer credential. Load its digest/version/status from the authoritative store on every request; reject missing, wrong or revoked credentials as generic 401 invalid_token. User JWTs/public/backend keys are not device identities. No other device/account is selectable. Future commands must recheck revocation atomically when acquiring work.",
+        "tags": [
+          "Devices"
+        ],
+        "security": [
+          {
+            "DeviceCredential": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. No credential or verifier is returned.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated correlation UUID matching the response envelope.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Sensitive responses must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-release-status": "proposed-not-deployed"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "UserSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Verified Supabase user access token from the configured project. Public publishable/anon/service-role keys are not user sessions. A gateway may additionally require an apikey header containing public project configuration."
+      },
+      "DeviceCredential": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Opaque device credential",
+        "description": "hny_device_<server-issued device UUID>.<32-byte unpadded base64url secret>. Device-only authority; never a Supabase JWT or global provider credential. Public gateway apikey may also be required."
+      }
+    },
+    "schemas": {
+      "DeviceSecret": {
+        "type": "string",
+        "minLength": 43,
+        "maxLength": 43,
+        "pattern": "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$",
+        "writeOnly": true,
+        "description": "Unpadded base64url of exactly 32 CSPRNG bytes. Generate and durably read back from platform secure storage BEFORE sending. Never log, echo or return this value. Pattern checks encoding, not entropy."
+      },
+      "DeviceEnrollment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enrollment_id",
+          "display_name",
+          "platform",
+          "protocol_version",
+          "capabilities",
+          "credential_secret"
+        ],
+        "properties": {
+          "enrollment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "windows",
+              "macos",
+              "linux"
+            ]
+          },
+          "protocol_version": {
+            "type": "string",
+            "const": "v1"
+          },
+          "capabilities": {
+            "type": "array",
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "host.projects",
+                "host.ai",
+                "host.databases"
+              ]
+            }
+          },
+          "credential_secret": {
+            "$ref": "#/components/schemas/DeviceSecret"
+          }
+        }
+      },
+      "DeviceRename": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "display_name"
+        ],
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "DeviceRotation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rotation_id",
+          "credential_secret"
+        ],
+        "properties": {
+          "rotation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "credential_secret": {
+            "$ref": "#/components/schemas/DeviceSecret"
+          }
+        }
+      },
+      "Device": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "enrollment_id",
+          "display_name",
+          "platform",
+          "protocol_version",
+          "capabilities",
+          "status",
+          "revision",
+          "credential_version",
+          "created_at",
+          "updated_at",
+          "revoked_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "windows",
+              "macos",
+              "linux"
+            ]
+          },
+          "protocol_version": {
+            "type": "string",
+            "const": "v1"
+          },
+          "capabilities": {
+            "type": "array",
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "host.projects",
+                "host.ai",
+                "host.databases"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "revoked"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "credential_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "active"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "revoked_at": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "revoked"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "revoked_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "DeviceResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Device"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "DeviceListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "devices",
+              "next_cursor"
+            ],
+            "properties": {
+              "devices": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "$ref": "#/components/schemas/Device"
+                }
+              },
+              "next_cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "AgentDeviceResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "credential_version",
+              "protocol_version"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "credential_version": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "protocol_version": {
+                "type": "string",
+                "const": "v1"
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "invalid_request",
+                  "authentication_required",
+                  "invalid_token",
+                  "email_confirmation_required",
+                  "forbidden",
+                  "not_found",
+                  "method_not_allowed",
+                  "payload_too_large",
+                  "unsupported_media_type",
+                  "rate_limited",
+                  "dependency_unavailable",
+                  "internal_error",
+                  "idempotency_conflict",
+                  "revision_conflict",
+                  "device_revoked",
+                  "unsupported_capability"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fresh server-generated correlation ID; matches X-Request-ID."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Invalid fields, invalid capability or missing required precondition.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error401": {
+        "description": "Missing/invalid credential for this route, including a device credential used on an owner route.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "Unconfirmed owner or denied browser origin.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "Missing or foreign device; identical response.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error405": {
+        "description": "Method not allowed; Allow is route-specific.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "Enrollment/rotation idempotency conflict, revoked device or unsupported capability.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error412": {
+        "description": "If-Match revision no longer current.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error413": {
+        "description": "Request exceeds 4 KiB body, 8 KiB headers or 2 KiB URL.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error415": {
+        "description": "Mutating JSON request must use application/json.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error429": {
+        "description": "Shared request budget exceeded.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          },
+          "Retry-After": {
+            "description": "Positive whole seconds before retrying.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,5}$"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error500": {
+        "description": "Safe internal failure.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Required dependency unavailable; fail closed.",
+        "headers": {
+          "X-Request-ID": {
+            "description": "Server-generated correlation UUID matching the response envelope.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Cache-Control": {
+            "description": "Sensitive responses must not be cached.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}
